@@ -1,0 +1,14 @@
+C:\Users\hillg\Documents\PokemonTCGPocket_RL\deckgym-core\target\release\deps\pyo3_build_config-a0d6e315b0a0e0d3.d: C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pyo3-build-config-0.22.6\src\lib.rs C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pyo3-build-config-0.22.6\src\errors.rs C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pyo3-build-config-0.22.6\src\impl_.rs C:\Users\hillg\Documents\PokemonTCGPocket_RL\deckgym-core\target\release\build\pyo3-build-config-e968e9fdb9ee0aea\out/pyo3-build-config-file.txt C:\Users\hillg\Documents\PokemonTCGPocket_RL\deckgym-core\target\release\build\pyo3-build-config-e968e9fdb9ee0aea\out/pyo3-build-config.txt
+
+C:\Users\hillg\Documents\PokemonTCGPocket_RL\deckgym-core\target\release\deps\libpyo3_build_config-a0d6e315b0a0e0d3.rlib: C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pyo3-build-config-0.22.6\src\lib.rs C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pyo3-build-config-0.22.6\src\errors.rs C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pyo3-build-config-0.22.6\src\impl_.rs C:\Users\hillg\Documents\PokemonTCGPocket_RL\deckgym-core\target\release\build\pyo3-build-config-e968e9fdb9ee0aea\out/pyo3-build-config-file.txt C:\Users\hillg\Documents\PokemonTCGPocket_RL\deckgym-core\target\release\build\pyo3-build-config-e968e9fdb9ee0aea\out/pyo3-build-config.txt
+
+C:\Users\hillg\Documents\PokemonTCGPocket_RL\deckgym-core\target\release\deps\libpyo3_build_config-a0d6e315b0a0e0d3.rmeta: C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pyo3-build-config-0.22.6\src\lib.rs C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pyo3-build-config-0.22.6\src\errors.rs C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pyo3-build-config-0.22.6\src\impl_.rs C:\Users\hillg\Documents\PokemonTCGPocket_RL\deckgym-core\target\release\build\pyo3-build-config-e968e9fdb9ee0aea\out/pyo3-build-config-file.txt C:\Users\hillg\Documents\PokemonTCGPocket_RL\deckgym-core\target\release\build\pyo3-build-config-e968e9fdb9ee0aea\out/pyo3-build-config.txt
+
+C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pyo3-build-config-0.22.6\src\lib.rs:
+C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pyo3-build-config-0.22.6\src\errors.rs:
+C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pyo3-build-config-0.22.6\src\impl_.rs:
+C:\Users\hillg\Documents\PokemonTCGPocket_RL\deckgym-core\target\release\build\pyo3-build-config-e968e9fdb9ee0aea\out/pyo3-build-config-file.txt:
+C:\Users\hillg\Documents\PokemonTCGPocket_RL\deckgym-core\target\release\build\pyo3-build-config-e968e9fdb9ee0aea\out/pyo3-build-config.txt:
+
+# env-dep:CARGO_PKG_VERSION=0.22.6
+# env-dep:OUT_DIR=C:\\Users\\hillg\\Documents\\PokemonTCGPocket_RL\\deckgym-core\\target\\release\\build\\pyo3-build-config-e968e9fdb9ee0aea\\out

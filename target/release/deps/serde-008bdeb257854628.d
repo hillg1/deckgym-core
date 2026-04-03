@@ -1,0 +1,14 @@
+c:\Users\hillg\Documents\PokemonTCGPocket_RL\deckgym-core\target\release\deps\serde-008bdeb257854628.d: C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs c:\Users\hillg\Documents\PokemonTCGPocket_RL\deckgym-core\target\release\build\serde-86957439145dc03e\out/private.rs
+
+c:\Users\hillg\Documents\PokemonTCGPocket_RL\deckgym-core\target\release\deps\libserde-008bdeb257854628.rlib: C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs c:\Users\hillg\Documents\PokemonTCGPocket_RL\deckgym-core\target\release\build\serde-86957439145dc03e\out/private.rs
+
+c:\Users\hillg\Documents\PokemonTCGPocket_RL\deckgym-core\target\release\deps\libserde-008bdeb257854628.rmeta: C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs c:\Users\hillg\Documents\PokemonTCGPocket_RL\deckgym-core\target\release\build\serde-86957439145dc03e\out/private.rs
+
+C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs:
+C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs:
+C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs:
+C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs:
+C:\Users\hillg\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs:
+c:\Users\hillg\Documents\PokemonTCGPocket_RL\deckgym-core\target\release\build\serde-86957439145dc03e\out/private.rs:
+
+# env-dep:OUT_DIR=c:\\Users\\hillg\\Documents\\PokemonTCGPocket_RL\\deckgym-core\\target\\release\\build\\serde-86957439145dc03e\\out
