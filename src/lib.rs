@@ -29,6 +29,7 @@ pub use deck::Deck;
 pub use game::Game;
 pub use hooks::to_playable_card;
 pub use move_generation::generate_possible_trainer_actions;
+pub use move_generation::generate_possible_actions;
 pub use optimize::{
     cli_optimize, optimize, optimize_with_configs, EnemyDeckConfig, OptimizationConfig,
     ParallelConfig, SimulationConfig,
@@ -49,7 +50,17 @@ use pyo3::prelude::*;
 use pyo3::types::PyModule;
 
 #[cfg(feature = "python")]
+pub mod gym_wrapper;
+
+#[cfg(feature = "python")]
 #[pymodule]
 fn deckgym(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
-    python_bindings::deckgym(py, m)
+    python_bindings::deckgym(py, m)?;
+    m.add_function(wrap_pyfunction!(gym_wrapper::test_gym_module, m)?)?;
+    m.add_function(wrap_pyfunction!(gym_wrapper::create_gym, m)?)?;
+    m.add_function(wrap_pyfunction!(gym_wrapper::create_emm_agent, m)?)?;
+    m.add_class::<gym_wrapper::EmmAgent>()?;
+    m.add_class::<gym_wrapper::PocketGym>()?;
+    Ok(())
 }
+

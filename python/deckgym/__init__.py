@@ -11,6 +11,11 @@ from .deckgym import (
     PySimulationResults as SimulationResults,
     py_simulate as simulate,
     get_player_types,
+    PocketGym,
+    create_gym,
+    create_emm_agent,
+    EmmAgent,
+    test_gym_module
 )
 
 __all__ = [
