@@ -96,7 +96,7 @@ fn test_pidgeot_drive_off_forces_opponent_switch() {
 
     // After using Drive Off, the opponent should be asked to choose a new active Pokémon
     let state = game.get_state_clone();
-    let (_actor, actions) = state.generate_possible_actions();
+    let (_actor, actions): (usize, Vec<Action>) = state.generate_possible_actions();
     let has_activate = actions
         .iter()
         .any(|a| matches!(a.action, SimpleAction::Activate { player: 1, .. }));

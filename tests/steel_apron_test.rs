@@ -39,7 +39,7 @@ fn test_steel_apron_only_attaches_to_metal() {
     game.apply_action(&play_action);
 
     let state = game.get_state_clone();
-    let (_actor, choices) = state.generate_possible_actions();
+    let (_actor, choices): (usize, Vec<Action>) = state.generate_possible_actions();
     let attachable_indices: Vec<usize> = choices
         .iter()
         .filter_map(|choice| match choice.action {
@@ -76,7 +76,7 @@ fn test_steel_apron_cures_existing_status_on_attach() {
     game.apply_action(&play_action);
 
     let state = game.get_state_clone();
-    let (_actor, choices) = state.generate_possible_actions();
+    let (_actor, choices): (usize, Vec<Action>) = state.generate_possible_actions();
     let attach_action = choices
         .into_iter()
         .find(|choice| {

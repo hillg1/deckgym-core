@@ -51,7 +51,7 @@ fn test_giant_cape_attach_increases_hp() {
     game.apply_action(&play_action);
 
     let state = game.get_state_clone();
-    let (_actor, choices) = state.generate_possible_actions();
+    let (_actor, choices): (usize, Vec<Action>) = state.generate_possible_actions();
     let attach_action = Action {
         actor: 0,
         action: attach_choice_for_idx(&choices, 0),
@@ -93,7 +93,7 @@ fn test_leaf_cape_only_attaches_to_grass() {
     game.apply_action(&play_action);
 
     let state = game.get_state_clone();
-    let (_actor, choices) = state.generate_possible_actions();
+    let (_actor, choices): (usize, Vec<Action>) = state.generate_possible_actions();
 
     let attachable_indices: Vec<usize> = choices
         .iter()
@@ -153,7 +153,7 @@ fn test_guzma_kos_pokemon_surviving_on_giant_cape() {
     );
     assert_eq!(state.points[0], 1, "Player 0 should gain 1 point");
 
-    let (actor, choices) = state.generate_possible_actions();
+    let (actor, choices): (usize, Vec<Action>) = state.generate_possible_actions();
     assert_eq!(actor, 1, "Opponent should be prompted to promote");
     let activate_action = choices
         .iter()
@@ -281,7 +281,7 @@ fn test_guzma_discards_all_tools_before_promotion() {
     assert!(state.in_play_pokemon[1][3].is_some());
     assert_eq!(state.winner, None);
 
-    let (actor, actions) = state.generate_possible_actions();
+    let (actor, actions): (usize, Vec<Action>) = state.generate_possible_actions();
     assert_eq!(actor, 1, "Opponent should still be prompted to promote");
     let activate_targets: Vec<usize> = actions
         .iter()

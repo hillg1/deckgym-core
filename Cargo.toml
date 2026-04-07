@@ -64,6 +64,10 @@ required-features = ["tui"]
 name = "temp_deck_generator"
 path = "src/bin/temp_deck_generator.rs"
 
+[[bin]]
+name = "list_unimplemented"
+path = "src/bin/list_unimplemented.rs"
+
 [[example]]
 name = "sylveon_deck_draw_speed"
 required-features = ["csv-export"]
