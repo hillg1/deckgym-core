@@ -142,6 +142,9 @@ fn forecast_ability_by_mechanic(
         AbilityMechanic::InfiltratingInspection => {
             panic!("InfiltratingInspection is triggered when played to bench")
         }
+        AbilityMechanic::DiscardOpponentActiveToolsAndSelfDiscard => {
+            discard_opponent_active_tools_and_self_discard(in_play_idx)
+        }
         AbilityMechanic::DiscardTopCardOpponentDeck => discard_top_card_opponent_deck(),
         AbilityMechanic::CoinFlipToPreventDamage => {
             panic!("CoinFlipToPreventDamage is a passive ability")
@@ -234,6 +237,15 @@ fn forecast_ability_by_mechanic(
         }
         AbilityMechanic::EndFirstTurnAttachEnergyToSelf { .. } => {
             panic!("EndFirstTurnAttachEnergyToSelf is triggered at end of first turn")
+        }
+        AbilityMechanic::NoRetreatIfAnyPokemonInPlay { .. } => {
+            panic!("NoRetreatIfAnyPokemonInPlay is a passive ability")
+        }
+        AbilityMechanic::UnownPower => {
+            panic!("UnownPower is a passive ability")
+        }
+        AbilityMechanic::ImmuneToStatusIfHasEnergyType { .. } => {
+            panic!("ImmuneToStatusIfHasEnergyType is a passive ability")
         }
     }
 }
@@ -629,4 +641,19 @@ fn vaporeon_wash_out(_: &mut StdRng, state: &mut State, action: &Action) {
     state
         .move_generation_stack
         .push((acting_player, possible_moves));
+}
+
+fn discard_opponent_active_tools_and_self_discard(in_play_idx: usize) -> Outcomes {
+    Outcomes::single_fn(move |_rng, state, action| {
+        let opponent = (action.actor + 1) % 2;
+        let active = state.in_play_pokemon[opponent][0].as_ref();
+        if active.is_some() && active.unwrap().attached_tool.is_some() {
+            debug!("Dismantling Keys: Discarding opponent's active tool and discarding self");
+            state.discard_tool(opponent, 0);
+            state.discard_from_play(action.actor, in_play_idx);
+            
+            // If the active was discarded (no, Klefki was on bench so active wasn't discarded, but check if we discarded Klefki from active spot anyway)
+            // Wait, we enforce it's used from bench, so in_play_idx != 0.
+        }
+    })
 }

@@ -29,6 +29,14 @@ pub(crate) fn get_retreat_cost(state: &State, card: &PlayedCard) -> Vec<EnergyTy
         {
             return vec![];
         }
+        if let Some(AbilityMechanic::NoRetreatIfAnyPokemonInPlay { required_pokemon_names }) = get_ability_mechanic(&card.card) {
+            let has_required = state.enumerate_in_play_pokemon(state.current_player).any(|(_, p)| {
+                required_pokemon_names.contains(&p.get_name().to_string())
+            });
+            if has_required {
+                return vec![];
+            }
+        }
         let mut normal_cost = pokemon_card.retreat_cost.clone();
         if has_tool(card, CardId::A4a067InflatableBoat)
             && card.get_energy_type() == Some(EnergyType::Water)

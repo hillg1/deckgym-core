@@ -108,6 +108,12 @@ where
                 is_from_active_attack,
                 Some(&attack_name),
             );
+
+            if attack_name == "Sweets Relay" {
+                state.sweets_relay_uses_per_game[action.actor] += 1;
+                state.sweets_relay_last_used_turn[action.actor] = Some(state.turn_count);
+            }
+
             additional_effect(rng, state, action);
             handle_knockouts(state, attacking_ref, is_from_active_attack);
         }

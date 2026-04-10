@@ -9,7 +9,7 @@ use std::hash::Hash;
 
 use crate::{
     actions::abilities::AbilityMechanic,
-    actions::{has_ability_mechanic, SimpleAction},
+    actions::{has_ability_mechanic, get_ability_mechanic, SimpleAction},
     deck::Deck,
     effects::TurnEffect,
     models::{Card, EnergyType, StatusCondition},
@@ -55,6 +55,9 @@ pub struct State {
     pub has_used_stadium: [bool; 2], // Tracks if each player has used the stadium this turn
     pub(crate) knocked_out_by_opponent_attack_this_turn: bool,
     pub(crate) knocked_out_by_opponent_attack_last_turn: bool,
+    // Sweets Relay Tracker
+    pub(crate) sweets_relay_last_used_turn: [Option<u8>; 2],
+    pub(crate) sweets_relay_uses_per_game: [u8; 2],
     // Maps turn to a vector of effects (cards) for that turn. Using BTreeMap to keep State hashable.
     turn_effects: BTreeMap<u8, Vec<TurnEffect>>,
 }
@@ -81,6 +84,8 @@ impl State {
 
             knocked_out_by_opponent_attack_this_turn: false,
             knocked_out_by_opponent_attack_last_turn: false,
+            sweets_relay_last_used_turn: [None, None],
+            sweets_relay_uses_per_game: [0, 0],
             turn_effects: BTreeMap::new(),
         }
     }
@@ -249,11 +254,45 @@ impl State {
         self.has_used_stadium[self.current_player] = false;
     }
 
-    /// Clear status conditions from every energy-bearing Pokémon on a player's side.
-    /// Called immediately when a Pokémon with SoothingWind enters play.
-    pub(crate) fn apply_soothing_wind_for_player(&mut self, player: usize) {
-        for slot in self.in_play_pokemon[player].iter_mut().flatten() {
-            if !slot.attached_energy.is_empty() {
+    /// Clear status conditions from every energy-bearing Pokémon on a player's side if they have immunity.
+    /// Called immediately when a Pokémon with SoothingWind (or similar) enters play, or energy is attached.
+    pub(crate) fn enforce_energy_status_immunities(&mut self, player: usize) {
+        let has_soothing_wind = self.in_play_pokemon[player]
+            .iter()
+            .flatten()
+            .any(|p| has_ability_mechanic(&p.card, &AbilityMechanic::SoothingWind));
+
+        let required_energy_type_immunity = self.in_play_pokemon[player]
+            .iter()
+            .flatten()
+            .find_map(|p| {
+                if let Some(AbilityMechanic::ImmuneToStatusIfHasEnergyType { energy_type }) = get_ability_mechanic(&p.card) {
+                    Some(energy_type)
+                } else {
+                    None
+                }
+            });
+
+        let mut slots_to_cure = Vec::new();
+        for (idx, slot) in self.in_play_pokemon[player].iter().enumerate() {
+            if let Some(pokemon) = slot {
+                let mut immune = false;
+                if has_soothing_wind && !pokemon.attached_energy.is_empty() {
+                    immune = true;
+                }
+                if let Some(energy_type) = required_energy_type_immunity {
+                    if pokemon.attached_energy.contains(&energy_type) {
+                        immune = true;
+                    }
+                }
+                if immune {
+                    slots_to_cure.push(idx);
+                }
+            }
+        }
+
+        for idx in slots_to_cure {
+            if let Some(slot) = self.in_play_pokemon[player][idx].as_mut() {
                 slot.cure_status_conditions();
             }
         }
@@ -388,6 +427,24 @@ impl State {
                 .any(|p| has_ability_mechanic(&p.card, &AbilityMechanic::SoothingWind));
             if has_soothing_wind {
                 debug!("Soothing Wind: Pokémon with energy is immune to status conditions");
+                return;
+            }
+        }
+
+        let required_energy_type_immunity = self.in_play_pokemon[player]
+            .iter()
+            .flatten()
+            .find_map(|p| {
+                if let Some(AbilityMechanic::ImmuneToStatusIfHasEnergyType { energy_type }) = get_ability_mechanic(&p.card) {
+                    Some(energy_type)
+                } else {
+                    None
+                }
+            });
+        
+        if let Some(energy_type) = required_energy_type_immunity {
+            if pokemon.attached_energy.contains(&energy_type) {
+                debug!("ImmuneToStatusIfHasEnergyType: Pokémon is immune to status conditions");
                 return;
             }
         }

@@ -161,4 +161,12 @@ pub enum AbilityMechanic {
     EndFirstTurnAttachEnergyToSelf {
         energy_type: EnergyType,
     },
+    NoRetreatIfAnyPokemonInPlay {
+        required_pokemon_names: Vec<String>,
+    },
+    UnownPower,
+    ImmuneToStatusIfHasEnergyType {
+        energy_type: EnergyType,
+    },
+    DiscardOpponentActiveToolsAndSelfDiscard,
 }

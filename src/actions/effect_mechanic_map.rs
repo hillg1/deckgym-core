@@ -684,12 +684,21 @@ pub static EFFECT_MECHANIC_MAP: LazyLock<HashMap<&'static str, Mechanic>> = Lazy
     );
     // map.insert("Heal 50 damage from 1 of your Benched Pokémon.", todo_implementation);
     // map.insert("Heal from this Pokémon the same amount of damage you did to your opponent's Active Pokémon.", todo_implementation);
-    // map.insert("If 1 of your Pokémon used Sweets Relay during your last turn, this attack does 20 more damage.", todo_implementation);
-    // map.insert("If 1 of your Pokémon used Sweets Relay during your last turn, this attack does 30 more damage.", todo_implementation);
-    // map.insert("If 1 of your Pokémon used Sweets Relay during your last turn, this attack does 60 more damage.", todo_implementation);
-    // map.insert("If Durant is on your Bench, this attack does 40 more damage.", todo_implementation);
-    // map.insert("If Latios is on your Bench, this attack does 20 more damage.", todo_implementation);
-    // map.insert("If Passimian is on your Bench, this attack does 40 more damage.", todo_implementation);
+    map.insert("If 1 of your Pokémon used Sweets Relay during your last turn, this attack does 20 more damage.", Mechanic::ExtraDamageIfUsedAttackLastTurn { attack_name: "Sweets Relay".to_string(), extra_damage: 20 });
+    map.insert("If 1 of your Pokémon used Sweets Relay during your last turn, this attack does 30 more damage.", Mechanic::ExtraDamageIfUsedAttackLastTurn { attack_name: "Sweets Relay".to_string(), extra_damage: 30 });
+    map.insert("If 1 of your Pokémon used Sweets Relay during your last turn, this attack does 60 more damage.", Mechanic::ExtraDamageIfUsedAttackLastTurn { attack_name: "Sweets Relay".to_string(), extra_damage: 60 });
+    map.insert("If Durant is on your Bench, this attack does 40 more damage.", Mechanic::ExtraDamageIfSpecificPokemonOnBench {
+        pokemon_names: vec!["Durant".to_string()],
+        extra_damage: 40,
+    });
+    map.insert("If Latios is on your Bench, this attack does 20 more damage.", Mechanic::ExtraDamageIfSpecificPokemonOnBench {
+        pokemon_names: vec!["Latios".to_string()],
+        extra_damage: 20,
+    });
+    map.insert("If Passimian is on your Bench, this attack does 40 more damage.", Mechanic::ExtraDamageIfSpecificPokemonOnBench {
+        pokemon_names: vec!["Passimian".to_string()],
+        extra_damage: 40,
+    });
     // map.insert("If any of your Benched Pokémon have damage on them, this attack does 50 more damage.", todo_implementation);
     map.insert("If any of your Pokémon were Knocked Out by damage from an attack during your opponent's last turn, this attack does 60 more damage.", Mechanic::ExtraDamageIfKnockedOutLastTurn { extra_damage: 60 });
     map.insert("If any of your Pokémon were Knocked Out by damage from an attack during your opponent's last turn, this attack does 40 more damage.", Mechanic::ExtraDamageIfKnockedOutLastTurn { extra_damage: 40 });
@@ -1348,7 +1357,10 @@ pub static EFFECT_MECHANIC_MAP: LazyLock<HashMap<&'static str, Mechanic>> = Lazy
             bench_side: BenchSide::YourBench,
         },
     );
-    // map.insert("This attack does 40 damage for each time your Pokémon used Sweets Relay during this game.", todo_implementation);
+    map.insert("This attack does 40 damage for each time your Pokémon used Sweets Relay during this game.", Mechanic::DamageMultiplierPerSpecificAttackUse {
+        attack_name: "Sweets Relay".to_string(),
+        damage_per_use: 40,
+    });
     map.insert(
         "This attack does 40 damage to 1 of your opponent's Pokémon.",
         Mechanic::DirectDamage {
@@ -1389,7 +1401,15 @@ pub static EFFECT_MECHANIC_MAP: LazyLock<HashMap<&'static str, Mechanic>> = Lazy
     );
     // map.insert("This attack's damage isn't affected by Weakness.", todo_implementation);
     // map.insert("This attack's damage isn't affected by any effects on your opponent's Active Pokémon.", todo_implementation);
-    // map.insert("Until this Pokémon leaves the Active Spot, this Pokémon's Rolling Frenzy attack does +30 damage. This effect stacks.", todo_implementation);
+    map.insert("Until this Pokémon leaves the Active Spot, this Pokémon's Rolling Frenzy attack does +30 damage. This effect stacks.", Mechanic::DamageAndCardEffect {
+        opponent: false,
+        effect: CardEffect::IncreasedDamageForAttack {
+            attack_name: "Rolling Frenzy".to_string(),
+            amount: 30,
+        },
+        duration: 100,
+        coin_flip: false,
+    });
     // map.insert("You can use this attack only if you have Uxie and Azelf on your Bench. Discard all Energy from this Pokémon.", todo_implementation);
     // map.insert("You may discard any number of your Benched [W] Pokémon. This attack does 40 more damage for each Benched Pokémon you discarded in this way.", todo_implementation);
     // map.insert("You may switch this Pokémon with 1 of your Benched Pokémon.", todo_implementation);

@@ -868,6 +868,23 @@ fn calculate_type_boost_bonus(
                     debug!("Type damage bonus: Increasing damage by {}", amount);
                     bonus += amount;
                 }
+                AbilityMechanic::UnownPower => {
+                    // Check if another Unown has a different ability
+                    let base_unown_has_other_ability = state
+                        .enumerate_in_play_pokemon(attacking_player)
+                        .any(|(_, other_pokemon)| {
+                            other_pokemon.get_name() == "Unown"
+                                && other_pokemon.card.get_ability().is_some()
+                                && !matches!(
+                                    get_ability_mechanic(&other_pokemon.card),
+                                    Some(AbilityMechanic::UnownPower)
+                                )
+                        });
+                    if base_unown_has_other_ability {
+                        debug!("UnownPower: Increasing damage by 10");
+                        bonus += 10;
+                    }
+                }
                 _ => {}
             }
         }
