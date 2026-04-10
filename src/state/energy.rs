@@ -83,6 +83,7 @@ impl State {
         for _ in 0..amount {
             self.on_attach_energy(actor, in_play_idx, energy, from_zone, is_turn_energy);
         }
+        self.enforce_energy_status_immunities(actor);
         handle_knockouts(self, (0, 0), false);
         true
     }

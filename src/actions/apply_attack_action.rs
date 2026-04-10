@@ -429,6 +429,15 @@ fn forecast_effect_attack_by_mechanic(
         Mechanic::ExtraDamageIfEvolvedThisTurn { extra_damage } => {
             extra_damage_if_evolved_this_turn_attack(state, attack.fixed_damage, *extra_damage)
         }
+        Mechanic::ExtraDamageIfSpecificPokemonOnBench { pokemon_names, extra_damage } => {
+            extra_damage_if_specific_pokemon_on_bench(state, attack.fixed_damage, pokemon_names, *extra_damage)
+        }
+        Mechanic::ExtraDamageIfUsedAttackLastTurn { attack_name, extra_damage } => {
+            extra_damage_if_used_attack_last_turn(state, attack.fixed_damage, attack_name, *extra_damage)
+        }
+        Mechanic::DamageMultiplierPerSpecificAttackUse { attack_name, damage_per_use } => {
+            damage_multiplier_per_specific_attack_use(state, attack_name, *damage_per_use)
+        }
         Mechanic::RecoilIfKo { self_damage } => {
             recoil_if_ko_attack(attack.fixed_damage, *self_damage)
         }
@@ -3159,4 +3168,50 @@ mod test {
             }
         }
     }
+}
+
+fn extra_damage_if_specific_pokemon_on_bench(
+    state: &State,
+    base_damage: u32,
+    pokemon_names: &[String],
+    extra_damage: u32,
+) -> Outcomes {
+    let mut has_pokemon = false;
+    for (_, pokemon) in state.enumerate_bench_pokemon(state.current_player) {
+        if pokemon_names.contains(&pokemon.get_name()) || (pokemon.card.is_ex() && pokemon_names.contains(&pokemon.get_name().replace(" ex", ""))) {
+            has_pokemon = true;
+            break;
+        }
+    }
+    let damage = if has_pokemon { base_damage + extra_damage } else { base_damage };
+    Outcomes::single(active_damage_mutation(damage))
+}
+
+fn extra_damage_if_used_attack_last_turn(
+    state: &State,
+    base_damage: u32,
+    attack_name: &str,
+    extra_damage: u32,
+) -> Outcomes {
+    let mut damage = base_damage;
+    if attack_name == "Sweets Relay" {
+        if let Some(last_used) = state.sweets_relay_last_used_turn[state.current_player] {
+            if state.turn_count >= 2 && last_used == state.turn_count - 2 {
+                damage += extra_damage;
+            }
+        }
+    }
+    Outcomes::single(active_damage_mutation(damage))
+}
+
+fn damage_multiplier_per_specific_attack_use(
+    state: &State,
+    attack_name: &str,
+    damage_per_use: u32,
+) -> Outcomes {
+    let mut uses = 0;
+    if attack_name == "Sweets Relay" {
+        uses = state.sweets_relay_uses_per_game[state.current_player];
+    }
+    Outcomes::single(active_damage_mutation(uses as u32 * damage_per_use))
 }

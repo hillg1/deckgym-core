@@ -103,7 +103,10 @@ pub static EFFECT_ABILITY_MECHANIC_MAP: LazyLock<HashMap<&'static str, AbilityMe
             "Each of your Pokémon that has any Energy attached recovers from all Special Conditions and can't be affected by any Special Conditions.",
             AbilityMechanic::SoothingWind,
         );
-        // map.insert("Each of your Pokémon that has any [P] Energy attached recovers from all Special Conditions and can't be affected by any Special Conditions.", todo_implementation);
+        map.insert(
+            "Each of your Pokémon that has any [P] Energy attached recovers from all Special Conditions and can't be affected by any Special Conditions.",
+            AbilityMechanic::ImmuneToStatusIfHasEnergyType { energy_type: EnergyType::Psychic }
+        );
         // map.insert("Each of your [G] Pokémon gets +20 HP.", todo_implementation);
         // map.insert("If a Stadium is in play, this Pokémon has no Retreat Cost.", todo_implementation);
         map.insert(
@@ -140,9 +143,15 @@ pub static EFFECT_ABILITY_MECHANIC_MAP: LazyLock<HashMap<&'static str, AbilityMe
             "If you have Arceus or Arceus ex in play, attacks used by this Pokémon do +30 damage to your opponent's Active Pokémon.",
             AbilityMechanic::IncreaseDamageIfArceusInPlay { amount: 30 },
         );
-        // map.insert("If you have Arceus or Arceus ex in play, this Pokémon has no Retreat Cost.", todo_implementation);
+        map.insert(
+            "If you have Arceus or Arceus ex in play, this Pokémon has no Retreat Cost.",
+            AbilityMechanic::NoRetreatIfAnyPokemonInPlay { required_pokemon_names: vec!["Arceus".to_string(), "Arceus ex".to_string()] }
+        );
         // map.insert("If you have Arceus or Arceus ex in play, this Pokémon takes -30 damage from attacks.", todo_implementation);
-        // map.insert("If you have Latias in play, this Pokémon has no Retreat Cost.", todo_implementation);
+        map.insert(
+            "If you have Latias in play, this Pokémon has no Retreat Cost.",
+            AbilityMechanic::NoRetreatIfAnyPokemonInPlay { required_pokemon_names: vec!["Latias".to_string()] }
+        );
         // map.insert("If you have another Falinks in play, this Pokémon's attacks do +20 damage to your opponent's Active Pokémon, and this Pokémon takes -20 damage from attacks from your opponent's Pokémon.", todo_implementation);
         // map.insert("If your opponent's Pokémon is Knocked Out by damage from this Pokémon's attacks, during your opponent's next turn, prevent all damage from—and effects of—attacks done to this Pokémon.", todo_implementation);
         map.insert(
@@ -161,7 +170,10 @@ pub static EFFECT_ABILITY_MECHANIC_MAP: LazyLock<HashMap<&'static str, AbilityMe
                 energy_type: EnergyType::Grass,
             },
         );
-        // map.insert("Once during your turn, if this Pokémon is on your Bench, you may discard all Pokémon Tools from your opponent's Active Pokémon. If you do, discard this Pokémon.", todo_implementation);
+        map.insert(
+            "Once during your turn, if this Pokémon is on your Bench, you may discard all Pokémon Tools from your opponent's Active Pokémon. If you do, discard this Pokémon.",
+            AbilityMechanic::DiscardOpponentActiveToolsAndSelfDiscard
+        );
         map.insert(
             "Once during your turn, if this Pokémon is on your Bench, you may switch it with your Active Pokémon.",
             AbilityMechanic::SwitchThisBenchWithActive,
@@ -277,7 +289,10 @@ pub static EFFECT_ABILITY_MECHANIC_MAP: LazyLock<HashMap<&'static str, AbilityMe
         );
         // map.insert("Prevent all effects of attacks used by your opponent's Pokémon done to this Pokémon.", todo_implementation);
         // map.insert("This Ability works if you have any Unown in play with an Ability other than GUARD. All of your Pokémon take -10 damage from attacks from your opponent's Pokémon.", todo_implementation);
-        // map.insert("This Ability works if you have any Unown in play with an Ability other than POWER. Attacks used by your Pokémon do +10 damage to your opponent's Active Pokémon.", todo_implementation);
+        map.insert(
+            "This Ability works if you have any Unown in play with an Ability other than POWER. Attacks used by your Pokémon do +10 damage to your opponent's Active Pokémon.",
+            AbilityMechanic::UnownPower
+        );
         map.insert(
             "This Pokémon can evolve into any Pokémon that evolves from Eevee if you play it from your hand onto this Pokémon. (This Pokémon can't evolve during your first turn or the turn you play it.)",
             AbilityMechanic::CanEvolveIntoEeveeEvolution,

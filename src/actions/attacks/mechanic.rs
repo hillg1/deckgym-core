@@ -200,6 +200,18 @@ pub enum Mechanic {
     ExtraDamageIfMovedFromBench {
         extra_damage: u32,
     },
+    ExtraDamageIfSpecificPokemonOnBench {
+        pokemon_names: Vec<String>,
+        extra_damage: u32,
+    },
+    ExtraDamageIfUsedAttackLastTurn {
+        attack_name: String,
+        extra_damage: u32,
+    },
+    DamageMultiplierPerSpecificAttackUse {
+        attack_name: String,
+        damage_per_use: u32,
+    },
     ExtraDamageIfEvolvedThisTurn {
         extra_damage: u32,
     },

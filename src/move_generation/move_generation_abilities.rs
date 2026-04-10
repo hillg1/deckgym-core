@@ -147,12 +147,18 @@ fn can_use_ability_by_mechanic(
         AbilityMechanic::PoisonAttackerOnDamaged => false,
         AbilityMechanic::IncreaseAttackCostForOpponentActive { .. } => false,
         AbilityMechanic::IncreaseRetreatCostForOpponentActive { .. } => false,
+        AbilityMechanic::DiscardOpponentActiveToolsAndSelfDiscard => {
+            !is_active && !card.ability_used && state.get_active((state.current_player + 1) % 2).attached_tool.is_some()
+        }
         AbilityMechanic::PreventDamageWhileBenched => false,
         AbilityMechanic::IncreaseHpPerAttachedEnergy { .. } => false,
         AbilityMechanic::HealSelfOnZoneAttach { .. } => false,
         AbilityMechanic::EndFirstTurnAttachEnergyToSelf { .. } => false,
         AbilityMechanic::EndTurnDrawCardIfActive { .. } => false,
         AbilityMechanic::EndTurnHealSelfIfActive { .. } => false,
+        AbilityMechanic::NoRetreatIfAnyPokemonInPlay { .. } => false, // Passive ability
+        AbilityMechanic::UnownPower => false, // Passive ability
+        AbilityMechanic::ImmuneToStatusIfHasEnergyType { .. } => false, // Passive ability
     }
 }
 
