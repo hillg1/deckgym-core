@@ -518,6 +518,31 @@ impl State {
         self.in_play_pokemon[ko_receiver][ko_pokemon_idx] = None;
     }
 
+    /// Rescues a Pokemon from play (e.g. from Rescue Scarf), moving it and its evolution chain
+    /// to the hand, while its energies and attached tools go to the discard pile.
+    pub(crate) fn rescue_from_play(&mut self, ko_receiver: usize, ko_pokemon_idx: usize) {
+        let ko_pokemon = self.in_play_pokemon[ko_receiver][ko_pokemon_idx]
+            .as_ref()
+            .expect("There should be a Pokemon to rescue");
+            
+        let mut returned_to_hand = ko_pokemon.cards_behind.clone();
+        returned_to_hand.push(ko_pokemon.card.clone());
+        
+        let mut cards_to_discard = vec![];
+        if let Some(tool_card) = &ko_pokemon.attached_tool {
+            cards_to_discard.push(tool_card.clone());
+        }
+
+        debug!("Rescuing to hand: {returned_to_hand:?}, Discarding: {cards_to_discard:?}");
+        self.hands[ko_receiver].extend(returned_to_hand);
+        
+        if !cards_to_discard.is_empty() {
+            self.discard_piles[ko_receiver].extend(cards_to_discard);
+        }
+        self.discard_energies[ko_receiver].extend(ko_pokemon.attached_energy.iter().cloned());
+        self.in_play_pokemon[ko_receiver][ko_pokemon_idx] = None;
+    }
+
     /// Removes the attached tool from a Pokémon and puts the tool card into the discard pile.
     /// Callers are responsible for resolving any knockouts caused by losing HP bonuses.
     pub(crate) fn discard_tool(&mut self, player: usize, in_play_idx: usize) {

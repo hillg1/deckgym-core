@@ -550,7 +550,23 @@ pub(crate) fn handle_knockouts(
             }
         }
 
-        state.discard_from_play(ko_receiver, ko_pokemon_idx);
+        let mut rescued = false;
+        if is_from_active_attack {
+            let ko_initiator_of_this_damage = attacking_ref.0;
+            if ko_receiver != ko_initiator_of_this_damage {
+                let ko_pokemon = state.in_play_pokemon[ko_receiver][ko_pokemon_idx].as_ref().unwrap();
+                if crate::tools::has_tool(ko_pokemon, crate::card_ids::CardId::A4155RescueScarf) {
+                    rescued = true;
+                }
+            }
+        }
+
+        if rescued {
+            debug!("Rescue Scarf activated for player {}", ko_receiver);
+            state.rescue_from_play(ko_receiver, ko_pokemon_idx);
+        } else {
+            state.discard_from_play(ko_receiver, ko_pokemon_idx);
+        }
     }
 
     // Set knocked_out_by_opponent_attack_this_turn flag

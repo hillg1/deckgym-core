@@ -62,6 +62,8 @@ static SITRUS_BERRY_EFFECT: LazyLock<String> =
     LazyLock::new(|| tool_effect_text_from_card_id(CardId::B1218SitrusBerry));
 static LUM_BERRY_EFFECT: LazyLock<String> =
     LazyLock::new(|| tool_effect_text_from_card_id(CardId::A2149LumBerry));
+static RESCUE_SCARF_EFFECT: LazyLock<String> =
+    LazyLock::new(|| tool_effect_text_from_card_id(CardId::A4155RescueScarf));
 
 pub fn tool_effects_equal(trainer_card: &TrainerCard, reference_tool_id: CardId) -> bool {
     ensure_tool_trainer(trainer_card);
@@ -141,5 +143,6 @@ pub fn is_tool_effect_implemented(trainer_card: &TrainerCard) -> bool {
             || e == BEASTITE_EFFECT.as_str()
             || e == SITRUS_BERRY_EFFECT.as_str()
             || e == LUM_BERRY_EFFECT.as_str()
+            || e == RESCUE_SCARF_EFFECT.as_str()
     )
 }
