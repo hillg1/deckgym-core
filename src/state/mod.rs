@@ -58,6 +58,7 @@ pub struct State {
     // Sweets Relay Tracker
     pub(crate) sweets_relay_last_used_turn: [Option<u8>; 2],
     pub(crate) sweets_relay_uses_per_game: [u8; 2],
+    pub actions_this_turn: u16,
     // Maps turn to a vector of effects (cards) for that turn. Using BTreeMap to keep State hashable.
     turn_effects: BTreeMap<u8, Vec<TurnEffect>>,
 }
@@ -86,6 +87,7 @@ impl State {
             knocked_out_by_opponent_attack_last_turn: false,
             sweets_relay_last_used_turn: [None, None],
             sweets_relay_uses_per_game: [0, 0],
+            actions_this_turn: 0,
             turn_effects: BTreeMap::new(),
         }
     }
@@ -345,6 +347,20 @@ impl State {
             );
         }
     }
+    
+    pub(crate) fn add_turn_effect_at_offset(&mut self, effect: TurnEffect, offset: u8) {
+        let target_turn = self.turn_count + offset;
+        self.turn_effects
+            .entry(target_turn)
+            .or_default()
+            .push(effect.clone());
+        trace!(
+            "Adding effect {:?} at exact offset {}, target turn: {}",
+            effect,
+            offset,
+            target_turn
+        );
+    }
 
     /// Retrieves all effects scheduled for the current turn
     pub(crate) fn get_current_turn_effects(&self) -> Vec<TurnEffect> {
@@ -465,6 +481,7 @@ impl State {
         self.end_turn_pending = false;
         self.current_player = (self.current_player + 1) % 2;
         self.turn_count += 1;
+        self.actions_this_turn = 0;
         self.end_turn_maintenance();
         self.queue_draw_action(self.current_player, 1);
         self.generate_energy();

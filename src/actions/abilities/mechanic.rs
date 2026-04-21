@@ -169,4 +169,16 @@ pub enum AbilityMechanic {
         energy_type: EnergyType,
     },
     DiscardOpponentActiveToolsAndSelfDiscard,
+    /// Smeargle — Portrait: Copy a random Supporter from opponent's hand.
+    /// Since the engine doesn't have full Supporter hand tracking for copy effects, this is
+    /// simplified to draw a card (mild benefit approximation).
+    SmearglePortrait,
+    /// Pyukumuku — Innards Out: If KO'd in Active Spot by attack damage, do damage to attacker.
+    KOCounterattackDamage {
+        amount: u32,
+    },
+    /// Gardevoir (A1 118) – Psy Shadow: Once during your turn, you may take 1 [P] Energy
+    /// from your Energy Zone and attach it to 1 of your [P] Pokémon.
+    /// If you do, put 2 damage counters on that Pokémon.
+    PsyShadow,
 }

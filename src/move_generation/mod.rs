@@ -47,6 +47,19 @@ pub fn generate_possible_actions(state: &State) -> (usize, Vec<Action>) {
             .collect();
         return (*actor, actions);
     }
+    
+    // Safety limit to prevent infinite loops (e.g. from bugged players or abilities)
+    // Only enforced when there's no stack, since we cannot easily end turn during a stack.
+    if state.actions_this_turn > 500 && !in_initial_setup_phase {
+        return (
+            state.current_player,
+            vec![Action {
+                actor: state.current_player,
+                action: SimpleAction::EndTurn,
+                is_stack: false,
+            }],
+        );
+    }
 
     if state.end_turn_pending {
         return (

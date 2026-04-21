@@ -135,6 +135,11 @@ pub enum SimpleAction {
     ReturnPokemonToHand {
         in_play_idx: usize,
     },
+    /// Attach specific energies to a Pokemon and apply damage to it.
+    AttachAndDamage {
+        attachments: Vec<(u32, EnergyType, usize)>, // (amount, energy_type, in_play_idx)
+        damage: u32,
+    },
     Noop, // No operation, used to have the user say "no" to a question
 }
 
@@ -278,6 +283,23 @@ impl fmt::Display for SimpleAction {
             }
             SimpleAction::ReturnPokemonToHand { in_play_idx } => {
                 write!(f, "ReturnPokemonToHand({in_play_idx})")
+            }
+            SimpleAction::AttachAndDamage {
+                attachments,
+                damage,
+            } => {
+                let attachments_str = attachments
+                    .iter()
+                    .map(|(amount, energy_type, in_play_idx)| {
+                        format!("({amount}, {energy_type:?}, {in_play_idx})")
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                write!(
+                    f,
+                    "AttachAndDamage(attachments:[{}], damage:{})",
+                    attachments_str, damage
+                )
             }
             SimpleAction::UseStadium => write!(f, "UseStadium"),
             SimpleAction::Noop => write!(f, "Noop"),

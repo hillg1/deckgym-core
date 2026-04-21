@@ -98,12 +98,18 @@ pub enum Mechanic {
         effect: TurnEffect,
         duration: u8,
     },
+    DamageAndNextTurnEffect {
+        effect: TurnEffect,
+    },
     SelfChargeActive {
         energies: Vec<EnergyType>,
     },
     ChargeYourTypeAnyWay {
         energy_type: EnergyType,
         count: usize,
+    },
+    ChargePsychicByName {
+        names: Vec<String>,
     },
     // Fairly unique mechanics
     ManaphyOceanicGift,
@@ -315,8 +321,70 @@ pub enum Mechanic {
         opponent: bool,
         damage: u32,
     },
-    /// Venoshock – extra damage if opponent's active is Poisoned.
+    /// Venoshock - extra damage if opponent's active is Poisoned.
     ExtraDamageIfDefenderPoisoned {
         extra_damage: u32,
+    },
+    // Missing Attacks
+    DamageOneOpponentPokemonPerItsEnergy {
+        damage_per_energy: u32,
+    },
+    SearchRandomEvolutionToHand,
+    ExtraDamageIfDefenderHasAbility {
+        extra_damage: u32,
+    },
+    ExtraDamageIfOpponentActiveHasTool {
+        extra_damage: u32,
+    },
+    MimicAttack,
+    CoinFlipCardEffectOnTails {
+        effect: CardEffect,
+        duration: u8,
+    },
+    ChoiceBenchHeal {
+        amount: u32,
+    },
+    ChoiceInPlayHeal {
+        amount: u32,
+    },
+    HealSelfDamageDealt,
+    CoinFlipSelfDamageOnTails {
+        amount: u32,
+    },
+    ExtraDamageIfAnyBenchedHurt {
+        extra_damage: u32,
+    },
+    HoOhExPhoenixTurbo,
+    /// Tornadus — Blow Through: If a Stadium is in play, this attack does extra damage.
+    /// Since stadiums are not tracked by the engine, this is treated as a no-op (base damage only).
+    ExtraDamageIfStadiumInPlay {
+        extra_damage: u32,
+    },
+    /// Machop — Shatter: Discard a Stadium in play.
+    /// Since stadiums are not tracked by the engine, this is treated as a no-op (base damage only).
+    DiscardStadium,
+    /// Mesprit — Supreme Blast: Can only be used if specific Pokémon are on your Bench.
+    /// Discard all Energy from this Pokémon.
+    RequireBenchPokemonAndDiscardAllEnergy {
+        required_pokemon: Vec<String>,
+    },
+    /// Mimikyu — Try to Imitate: Flip a coin. If heads, copy opponent's active attack.
+    CoinFlipCopyOpponentActiveAttack,
+    /// Mew (B2b) — Miraculous Memory: Copy a random attack from opponent's hand/deck.
+    CopyRandomOpponentAttack,
+    /// Mew — Psy Report: Your opponent reveals their hand.
+    RevealOpponentHand,
+    /// Mimikyu — Shadow Hit: This attack also does damage to 1 of your Pokémon.
+    AlsoChoiceInPlayDamage {
+        opponent: bool,
+        damage: u32,
+    },
+    /// Smeargle — Splatter Coating: Change the type of a random Energy attached to your opponent's Active Pokémon.
+    ChangeRandomAttachedEnergyType {
+        allowed_types: Vec<EnergyType>,
+    },
+    /// Miltank — Rolling Frenzy: Damage increases per stack until Pokémon leaves Active Spot.
+    RollingFrenzyStacks {
+        damage_per_stack: u32,
     },
 }

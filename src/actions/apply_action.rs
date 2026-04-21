@@ -31,6 +31,7 @@ use super::{
 /// and then chooses one of them to apply. This is so that bot implementations can re-use the
 /// `forecast_action` function.
 pub fn apply_action(rng: &mut StdRng, state: &mut State, action: &Action) {
+    state.actions_this_turn += 1;
     let (probabilities, mut lazy_mutations) = forecast_action(state, action).into_branches();
     if probabilities.len() == 1 {
         lazy_mutations.remove(0)(rng, state, action);
@@ -63,6 +64,7 @@ pub fn forecast_action(state: &State, action: &Action) -> Outcomes {
         | SimpleAction::HealAllEeveeEvolutions
         | SimpleAction::DiscardFossil { .. }
         | SimpleAction::ReturnPokemonToHand { .. }
+        | SimpleAction::AttachAndDamage { .. }
         | SimpleAction::Noop => forecast_deterministic_action(),
         SimpleAction::UseAbility { in_play_idx } => forecast_ability(state, action, *in_play_idx),
         SimpleAction::Attack(index) => forecast_attack(action.actor, state, *index),
@@ -134,14 +136,14 @@ pub fn forecast_action(state: &State, action: &Action) -> Outcomes {
 }
 
 fn is_will_eligible_action(action: &SimpleAction) -> bool {
-    matches!(
-        action,
+    match action {
         SimpleAction::Attack(_)
-            | SimpleAction::UseCopiedAttack { .. }
-            | SimpleAction::UseAbility { .. }
-            | SimpleAction::Play { .. }
-            | SimpleAction::UseStadium
-    )
+        | SimpleAction::UseCopiedAttack { .. }
+        | SimpleAction::UseAbility { .. }
+        | SimpleAction::Play { .. }
+        | SimpleAction::UseStadium => true,
+        _ => false,
+    }
 }
 
 fn forecast_deterministic_action() -> Outcomes {
@@ -240,6 +242,10 @@ fn apply_deterministic_action(state: &mut State, action: &Action) {
         SimpleAction::ReturnPokemonToHand { in_play_idx } => {
             apply_return_pokemon_to_hand(action.actor, state, *in_play_idx)
         }
+        SimpleAction::AttachAndDamage {
+            attachments,
+            damage,
+        } => apply_attach_and_damage(state, action.actor, attachments, *damage),
         SimpleAction::Noop => {}
         _ => panic!("Deterministic Action expected"),
     }
@@ -259,6 +265,31 @@ fn apply_attach_energy(
         }
 
         state.attach_energy_from_zone(actor, *in_play_idx, *energy, *amount, is_turn_energy);
+    }
+}
+
+fn apply_attach_and_damage(
+    state: &mut State,
+    actor: usize,
+    attachments: &[(u32, EnergyType, usize)],
+    damage: u32,
+) {
+    for (amount, energy, in_play_idx) in attachments {
+        if state.in_play_pokemon[actor][*in_play_idx].is_none() {
+            continue;
+        }
+
+        let attached =
+            state.attach_energy_from_zone(actor, *in_play_idx, *energy, *amount, false);
+        if attached {
+            handle_damage(
+                state,
+                (actor, *in_play_idx),
+                &[(damage, actor, *in_play_idx)],
+                false,
+                None,
+            );
+        }
     }
 }
 

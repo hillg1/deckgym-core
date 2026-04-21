@@ -41,6 +41,35 @@ pub(crate) fn generate_attack_actions(state: &State) -> Vec<SimpleAction> {
                     continue;
                 }
 
+                // Check for bench Pokémon requirements (e.g. Mesprit's Supreme Blast)
+                if let Some(effect_text) = &attack.effect {
+                    if effect_text.contains("only if you have") && effect_text.contains("on your Bench") {
+                        // Parse required Pokémon names from effect text like
+                        // "You can use this attack only if you have Uxie and Azelf on your Bench."
+                        let bench_names: Vec<String> = state
+                            .enumerate_bench_pokemon(current_player)
+                            .map(|(_, p)| p.get_name())
+                            .collect();
+                        // Extract names between "have" and "on your Bench"
+                        if let Some(start) = effect_text.find("have ") {
+                            if let Some(end) = effect_text.find(" on your Bench") {
+                                let names_str = &effect_text[start + 5..end];
+                                let required: Vec<&str> = names_str
+                                    .split(" and ")
+                                    .flat_map(|s| s.split(", "))
+                                    .map(|s| s.trim())
+                                    .collect();
+                                let all_present = required
+                                    .iter()
+                                    .all(|name| bench_names.iter().any(|bn| bn == name));
+                                if !all_present {
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                }
+
                 actions.push(SimpleAction::Attack(i));
             }
         }

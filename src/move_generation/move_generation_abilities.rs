@@ -147,9 +147,6 @@ fn can_use_ability_by_mechanic(
         AbilityMechanic::PoisonAttackerOnDamaged => false,
         AbilityMechanic::IncreaseAttackCostForOpponentActive { .. } => false,
         AbilityMechanic::IncreaseRetreatCostForOpponentActive { .. } => false,
-        AbilityMechanic::DiscardOpponentActiveToolsAndSelfDiscard => {
-            !is_active && !card.ability_used && state.get_active((state.current_player + 1) % 2).attached_tool.is_some()
-        }
         AbilityMechanic::PreventDamageWhileBenched => false,
         AbilityMechanic::IncreaseHpPerAttachedEnergy { .. } => false,
         AbilityMechanic::HealSelfOnZoneAttach { .. } => false,
@@ -159,6 +156,21 @@ fn can_use_ability_by_mechanic(
         AbilityMechanic::NoRetreatIfAnyPokemonInPlay { .. } => false, // Passive ability
         AbilityMechanic::UnownPower => false, // Passive ability
         AbilityMechanic::ImmuneToStatusIfHasEnergyType { .. } => false, // Passive ability
+        AbilityMechanic::SmearglePortrait => is_active && !card.ability_used,
+        AbilityMechanic::DiscardOpponentActiveToolsAndSelfDiscard => {
+            !is_active && !card.ability_used && {
+                let opponent = (state.current_player + 1) % 2;
+                state.get_active(opponent).attached_tool.is_some()
+            }
+        }
+        AbilityMechanic::KOCounterattackDamage { .. } => false, // Passive ability
+        AbilityMechanic::PsyShadow => {
+            !card.ability_used
+                && state.can_attach_energy_from_zone(0)
+                && state
+                    .enumerate_in_play_pokemon(state.current_player)
+                    .any(|(_, p)| p.card.get_type() == Some(EnergyType::Psychic))
+        }
     }
 }
 

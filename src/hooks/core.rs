@@ -635,6 +635,10 @@ fn get_turn_effect_damage_reduction(
             } if *player == target_player && target_energy_type == Some(*energy_type) => {
                 Some(*amount)
             }
+            TurnEffect::ReducedDamageGlobal {
+                amount,
+                receiving_player,
+            } if *receiving_player == target_player => Some(*amount),
             _ => None,
         })
         .sum::<u32>()
@@ -798,8 +802,14 @@ pub(crate) fn modify_damage(
         0
     };
 
+    let unown_power_boost = if target_idx == 0 && target_player != attacking_player {
+        get_unown_power_boost(state, attacking_player)
+    } else {
+        0
+    };
+
     debug!(
-        "Attack: {:?}, Weakness: {}, IncreasedDamage: {}, IncreasedAttackSpecific: {}, ReducedDamage: {}, TurnEffectReduction: {}, HeavyHelmet: {}, MetalCoreBarrier: {}, SteelApron: {}, IntimidatingFang: {}, AbilityReduction: {}, AbilityIncrease: {}, TypeBoost: {}, StadiumBonus: {}",
+        "Attack: {:?}, Weakness: {}, IncreasedDamage: {}, IncreasedAttackSpecific: {}, ReducedDamage: {}, TurnEffectReduction: {}, HeavyHelmet: {}, MetalCoreBarrier: {}, SteelApron: {}, IntimidatingFang: {}, AbilityReduction: {}, AbilityIncrease: {}, TypeBoost: {}, StadiumBonus: {}, UnownBoost: {}",
         base_damage,
         weakness_modifier,
         increased_turn_effect_modifiers,
@@ -813,7 +823,8 @@ pub(crate) fn modify_damage(
         ability_damage_reduction,
         ability_damage_increase,
         type_boost_bonus,
-        stadium_damage_bonus
+        stadium_damage_bonus,
+        unown_power_boost
     );
     (base_damage
         + weakness_modifier
@@ -821,7 +832,8 @@ pub(crate) fn modify_damage(
         + increased_turn_effect_modifiers
         + increased_attack_specific_modifiers
         + type_boost_bonus
-        + stadium_damage_bonus)
+        + stadium_damage_bonus
+        + unown_power_boost)
         .saturating_sub(
             reduced_card_effect_modifiers
                 + reduced_turn_effect_modifiers
@@ -831,6 +843,24 @@ pub(crate) fn modify_damage(
                 + intimidating_fang_reduction
                 + ability_damage_reduction,
         )
+}
+
+fn get_unown_power_boost(state: &State, player: usize) -> u32 {
+    let has_unown_other_ability = state.enumerate_in_play_pokemon(player).any(|(_, p)| {
+        p.get_name().contains("Unown")
+            && get_ability_mechanic(&p.card).is_some_and(|m| !matches!(m, AbilityMechanic::UnownPower))
+    });
+    if !has_unown_other_ability {
+        return 0;
+    }
+    let unown_powers = state
+        .enumerate_in_play_pokemon(player)
+        .filter(|(_, p)| {
+            p.get_name().contains("Unown")
+                && get_ability_mechanic(&p.card).is_some_and(|m| matches!(m, AbilityMechanic::UnownPower))
+        })
+        .count();
+    unown_powers as u32 * 10
 }
 
 /// Calculate type-specific damage boost from abilities like Lucario's Fighting Coach or Aegislash's Royal Command
@@ -927,6 +957,20 @@ pub(crate) fn get_attack_cost(
         })
         .unwrap_or_default();
     modified_cost.extend(vec![EnergyType::Colorless; extra_colorless]);
+
+    // Check Barry energy reduction
+    if state.get_current_turn_effects().iter().any(|e| matches!(e, TurnEffect::BarryEnergyReduction)) {
+        if let Some(active) = &state.in_play_pokemon[attacking_player][0] {
+            let name = active.get_name();
+            if name.contains("Snorlax") || name.contains("Heracross") || name.contains("Staraptor") {
+                for _ in 0..2 {
+                    if let Some(pos) = modified_cost.iter().position(|e| *e == EnergyType::Colorless) {
+                        modified_cost.remove(pos);
+                    }
+                }
+            }
+        }
+    }
 
     modified_cost
 }

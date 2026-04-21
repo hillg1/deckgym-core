@@ -60,4 +60,9 @@ pub enum TurnEffect {
     },
     ForceFirstHeads,
     BonusPointForHaxorusActiveKO,
+    ReducedDamageGlobal {
+        amount: u32,
+        receiving_player: usize,
+    },
+    BarryEnergyReduction,
 }

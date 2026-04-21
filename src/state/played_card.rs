@@ -32,6 +32,9 @@ pub struct PlayedCard {
     pub cards_behind: Vec<Card>,
     pub prevent_first_attack_damage_used: bool,
 
+    /// Stacking damage for Miltank's Rolling Frenzy.
+    pub rolling_frenzy_stacks: u32,
+
     /// Effects that should be cleared if moved to the bench (by retreat or similar).
     /// The second value is the number of turns left for the effect.
     effects: Vec<(CardEffect, u8)>,
@@ -64,6 +67,7 @@ impl PlayedCard {
             confused: false,
             effects: vec![],
             prevent_first_attack_damage_used: false,
+            rolling_frenzy_stacks: 0,
         }
     }
 
@@ -283,6 +287,7 @@ impl PlayedCard {
         self.burned = false;
         self.confused = false;
         self.effects.clear();
+        self.rolling_frenzy_stacks = 0;
     }
 
     pub(crate) fn cure_status_conditions(&mut self) {

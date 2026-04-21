@@ -958,6 +958,13 @@ pub static EFFECT_MECHANIC_MAP: LazyLock<HashMap<&'static str, Mechanic>> = Lazy
     );
     // map.insert("Switch this Pokémon with 1 of your Benched [L] Pokémon.", todo_implementation);
     map.insert(
+        "Take 2 [P] Energy from your Energy Zone and attach it to 1 of your Benched [P] Pokémon.",
+        Mechanic::ChargeBench {
+            energies: vec![EnergyType::Psychic, EnergyType::Psychic],
+            target_benched_type: Some(EnergyType::Psychic),
+        },
+    );
+    map.insert(
         "Take 2 [M] Energy from your Energy Zone and attach it to 1 of your Benched Pokémon.",
         Mechanic::ChargeBench {
             energies: vec![EnergyType::Metal, EnergyType::Metal],
@@ -1781,5 +1788,190 @@ pub static EFFECT_MECHANIC_MAP: LazyLock<HashMap<&'static str, Mechanic>> = Lazy
             damage_per_point: 30,
         },
     );
+    // Missing Attacks
+    map.insert(
+        "This attack does 20 damage to 1 of your opponent's Pokémon for each Energy attached to that Pokémon.",
+        Mechanic::DamageOneOpponentPokemonPerItsEnergy { damage_per_energy: 20 },
+    );
+    map.insert(
+        "Put a random card that evolves from Rockruff from your deck into your hand.",
+        Mechanic::SearchRandomEvolutionToHand,
+    );
+    map.insert(
+        "If your opponent's Active Pokémon has an Ability, this attack does 40 more damage.",
+        Mechanic::ExtraDamageIfDefenderHasAbility { extra_damage: 40 },
+    );
+    map.insert(
+        "If your opponent's Active Pokémon has a Pokémon Tool attached, this attack does 30 more damage.",
+        Mechanic::ExtraDamageIfOpponentActiveHasTool { extra_damage: 30 },
+    );
+    map.insert(
+        "Shuffle your hand into your deck. Draw a card for each card in your opponent's hand.",
+        Mechanic::MimicAttack,
+    );
+    map.insert(
+        "Flip a coin. If tails, during your next turn, this Pokémon can't attack.",
+        Mechanic::CoinFlipCardEffectOnTails { effect: CardEffect::CannotAttack, duration: 1 },
+    );
+    map.insert(
+        "This attack does 70 damage to 1 of your opponent's Benched Pokémon.",
+        Mechanic::AlsoChoiceBenchDamage { opponent: true, damage: 70 },
+    );
+    map.insert(
+        "This attack does 50 damage to 1 of your opponent's Benched Pokémon.",
+        Mechanic::AlsoChoiceBenchDamage { opponent: true, damage: 50 },
+    );
+    map.insert(
+        "Heal 50 damage from 1 of your Benched Pokémon.",
+        Mechanic::ChoiceBenchHeal { amount: 50 },
+    );
+    map.insert(
+        "Heal from this Pokémon the same amount of damage you did to your opponent's Active Pokémon.",
+        Mechanic::HealSelfDamageDealt,
+    );
+    map.insert(
+        "Flip a coin. If tails, this Pokémon also does 20 damage to itself.",
+        Mechanic::CoinFlipSelfDamageOnTails { amount: 20 },
+    );
+    map.insert(
+        "If any of your Benched Pokémon have damage on them, this attack does 50 more damage.",
+        Mechanic::ExtraDamageIfAnyBenchedHurt { extra_damage: 50 },
+    );
+    map.insert(
+        "Take a [R], [W], and [L] Energy from your Energy Zone and attach them to your Benched Basic Pokémon in any way you like.",
+        Mechanic::HoOhExPhoenixTurbo,
+    );
+    map.insert(
+        "This attack does 20 damage for each Energy attached to your opponent's Active Pokémon.",
+        Mechanic::DamagePerEnergyAll { opponent: true, damage_per_energy: 20 },
+    );
+    // ── Missing attack effects found during benchmarks ──
+    // Tornadus (P-B 030 / B2 138) — "If a Stadium is in play, this attack does 40 more damage."
+    // Since stadiums are not tracked by the engine, we map this but the mechanic is a no-op.
+    map.insert(
+        "If a Stadium is in play, this attack does 40 more damage.",
+        Mechanic::ExtraDamageIfStadiumInPlay { extra_damage: 40 },
+    );
+    // Machop (B2 079) — "Discard a Stadium in play."
+    // Since stadiums are not tracked, this is a no-op.
+    map.insert(
+        "Discard a Stadium in play.",
+        Mechanic::DiscardStadium,
+    );
+    // Mesprit (A2 166) — "You can use this attack only if you have Uxie and Azelf on your Bench. Discard all Energy from this Pokémon."
+    map.insert(
+        "You can use this attack only if you have Uxie and Azelf on your Bench. Discard all Energy from this Pokémon.",
+        Mechanic::RequireBenchPokemonAndDiscardAllEnergy {
+            required_pokemon: vec!["Uxie".to_string(), "Azelf".to_string()],
+        },
+    );
+    // Nosepass (P-A 045) — "Flip a coin. If heads, during your opponent's next turn, prevent all damage done to this Pokémon by attacks."
+    map.insert(
+        "Flip a coin. If heads, during your opponent's next turn, prevent all damage done to this Pokémon by attacks.",
+        Mechanic::CoinFlipToBlockAttackNextTurn,
+    );
+    // Spritzee (B1a 035) — "Heal 20 damage from 1 of your Pokémon."
+    map.insert(
+        "Heal 20 damage from 1 of your Pokémon.",
+        Mechanic::ChoiceBenchHeal { amount: 20 },
+    );
+    // Mimikyu (P-A 113) — "Flip a coin. If heads, choose 1 of your opponent's Active Pokémon's attacks and use it as this attack."
+    map.insert(
+        "Flip a coin. If heads, choose 1 of your opponent's Active Pokémon's attacks and use it as this attack.",
+        Mechanic::CoinFlipCopyOpponentActiveAttack,
+    );
+    // Mew (B2b 086) — "1 attack from among the Pokémon in your opponent's hand and deck is chosen at random, and you use the chosen attack as this attack."
+    map.insert(
+        "1 attack from among the Pokémon in your opponent's hand and deck is chosen at random, and you use the chosen attack as this attack.",
+        Mechanic::CopyRandomOpponentAttack,
+    );
+
+    // Mew (A1 283 / A1a 031) — "Your opponent reveals their hand."
+    map.insert(
+        "Your opponent reveals their hand.",
+        Mechanic::RevealOpponentHand,
+    );
+    // Mimikyu (A3 083 / P-A 066) — "This attack also does 20 damage to 1 of your Pokémon."
+    map.insert(
+        "This attack also does 20 damage to 1 of your Pokémon.",
+        Mechanic::AlsoChoiceInPlayDamage { opponent: false, damage: 20 },
+    );
+    // Smeargle (A4 148 / A4 184) — "Change the type of a random Energy attached to your opponent's Active Pokémon to 1 of the following at random: [G], [R], [W], [L], [P], [F], [D], or [M]."
+    map.insert(
+        "Change the type of a random Energy attached to your opponent's Active Pokémon to 1 of the following at random: [G], [R], [W], [L], [P], [F], [D], or [M].",
+        Mechanic::ChangeRandomAttachedEnergyType {
+            allowed_types: vec![
+                EnergyType::Grass,
+                EnergyType::Fire,
+                EnergyType::Water,
+                EnergyType::Lightning,
+                EnergyType::Psychic,
+                EnergyType::Fighting,
+                EnergyType::Darkness,
+                EnergyType::Metal,
+            ],
+        },
+    );
+    // Miltank (P-A 107) — Rolling Frenzy
+    map.insert(
+        "Until this Pokémon leaves the Active Spot, this Pokémon's Rolling Frenzy attack does +30 damage. This effect stacks.",
+        Mechanic::RollingFrenzyStacks { damage_per_stack: 30 },
+    );
+    // Latias (P-A 101) — Crossing Flights
+    map.insert(
+        "If Latios is on your Bench, this attack does 20 more damage.",
+        Mechanic::ExtraDamageIfSpecificPokemonOnBench { pokemon_names: vec!["Latios".to_string()], extra_damage: 20 },
+    );
+    // Milcery (A4b 186) — Sweets Relay
+    map.insert(
+        "If 1 of your Pokémon used Sweets Relay during your last turn, this attack does 20 more damage.",
+        Mechanic::ExtraDamageIfUsedAttackLastTurn { attack_name: "Sweets Relay".to_string(), extra_damage: 20 },
+    );
+    // Indeedee (B2 169) — Zen Shard
+    map.insert(
+        "This attack does 70 damage to 1 of your opponent's Benched Pokémon.",
+        Mechanic::AlsoChoiceBenchDamage { opponent: true, damage: 70 },
+    );
+    // Uxie (A2 075) — Mind Boost
+    map.insert(
+        "Take a [P] Energy from your Energy Zone and attach it to Mesprit or Azelf.",
+        Mechanic::ChargePsychicByName { names: vec!["Mesprit".to_string(), "Azelf".to_string()] },
+    );
+    // Azurill (A4a 077) — Squishy Healing
+    map.insert(
+        "Heal 50 damage from 1 of your Benched Pokémon.",
+        Mechanic::ChoiceBenchHeal { amount: 50 },
+    );
+    // Spritzee (B1a 035) — Sweet Scent
+    map.insert(
+        "Heal 20 damage from 1 of your Pokémon.",
+        Mechanic::ChoiceInPlayHeal { amount: 20 },
+    );
+    // Machop (B2 079) — Shatter
+    map.insert(
+        "Discard a Stadium in play.",
+        Mechanic::DiscardStadium,
+    );
+    // Mew (B2b 086) — Miraculous Memory
+    map.insert(
+        "1 attack from among the Pokémon in your opponent's hand and deck is chosen at random, and you use the chosen attack as this attack.",
+        Mechanic::CopyRandomOpponentAttack,
+    );
+    // Nosepass (P-A 045) — Iron Defense
+    map.insert(
+        "Flip a coin. If heads, during your opponent's next turn, prevent all damage done to this Pokémon by attacks.",
+        Mechanic::DamageAndCardEffect { opponent: false, effect: CardEffect::PreventAllDamageAndEffects, duration: 1, coin_flip: true },
+    );
+    // Rayquaza (P-A 063) — Flip until tails
+    map.insert(
+        "Flip a coin until you get tails. This attack does 30 more damage for each heads.",
+        Mechanic::FlipUntilTailsDamage { damage_per_heads: 30 },
+    );
+    // Oricorio (B2 161) — Next turn damage boost
+    map.insert(
+        "During your next turn, attacks used by your Pokémon do +20 damage to your opponent's Active Pokémon.",
+        Mechanic::DamageAndNextTurnEffect { effect: TurnEffect::IncreasedDamage { amount: 20 } },
+    );
+
     map
 });

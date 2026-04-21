@@ -179,7 +179,16 @@ pub fn forecast_trainer_action(
         CardId::A2b072TeamRocketGrunt | CardId::A2b091TeamRocketGrunt => {
             team_rocket_grunt_outcomes()
         }
-        _ => panic!("Unsupported Trainer Card"),
+        CardId::A1a067Blue | CardId::A1a081Blue => Outcomes::single_fn(blue_effect),
+        CardId::A1226LtSurge | CardId::A1273LtSurge => Outcomes::single_fn(lt_surge_effect),
+        CardId::A1a064PokemonFlute => Outcomes::single_fn(pokemon_flute_effect),
+        CardId::A1a066BuddingExpeditioner => Outcomes::single_fn(budding_expeditioner_effect),
+        CardId::A2a074Barry | CardId::A2a089Barry => Outcomes::single_fn(barry_effect),
+        CardId::A4161Hiker | CardId::A4201Hiker => Outcomes::single_fn(hiker_effect),
+        CardId::A4a071Morty | CardId::A4a085Morty => Outcomes::single_fn(morty_effect),
+        CardId::PA003HandScope => Outcomes::single_fn(hand_scope_effect),
+        CardId::PA008PokedEx => Outcomes::single_fn(pokedex_effect),
+        _ => panic!("Unsupported Trainer Card {:?}", trainer_id),
     }
 }
 
@@ -1270,6 +1279,75 @@ fn team_rocket_grunt_outcomes() -> Outcomes {
         )
     })
 }
+
+fn blue_effect(_rng: &mut StdRng, state: &mut State, action: &Action) {
+    state.add_turn_effect(TurnEffect::ReducedDamageGlobal { amount: 10, receiving_player: action.actor }, 2);
+}
+
+fn lt_surge_effect(_rng: &mut StdRng, state: &mut State, action: &Action) {
+    let active_name = state.in_play_pokemon[action.actor][0].as_ref().map(|p| p.get_name()).unwrap_or("".to_string());
+    if active_name == "Raichu" || active_name == "Electrode" || active_name == "Electabuzz" {
+        let mut lightning_energies = Vec::new();
+        for slot in state.in_play_pokemon[action.actor].iter_mut().skip(1) {
+            if let Some(pokemon) = slot.as_mut() {
+                let mut i = 0;
+                while i < pokemon.attached_energy.len() {
+                    if pokemon.attached_energy[i] == EnergyType::Lightning {
+                        lightning_energies.push(pokemon.attached_energy.remove(i));
+                    } else {
+                        i += 1;
+                    }
+                }
+            }
+        }
+        if let Some(active) = state.in_play_pokemon[action.actor][0].as_mut() {
+            active.attached_energy.extend(lightning_energies);
+        }
+    }
+}
+
+fn pokemon_flute_effect(rng: &mut StdRng, state: &mut State, action: &Action) {
+    let opponent = (action.actor + 1) % 2;
+    let mut basic_indices = Vec::new();
+    for (i, card) in state.discard_piles[opponent].iter().enumerate() {
+        if let crate::models::Card::Pokemon(p) = card {
+            if p.stage == 0 {
+                basic_indices.push(i);
+            }
+        }
+    }
+    
+    if !basic_indices.is_empty() && state.in_play_pokemon[opponent].iter().skip(1).any(|slot| slot.is_none()) {
+        let chosen_idx = basic_indices[rng.gen_range(0..basic_indices.len())];
+        let card = state.discard_piles[opponent].remove(chosen_idx);
+        
+        for slot in state.in_play_pokemon[opponent].iter_mut().skip(1) {
+            if slot.is_none() {
+                *slot = Some(crate::hooks::to_playable_card(&card, true));
+                break;
+            }
+        }
+    }
+}
+
+fn budding_expeditioner_effect(_rng: &mut StdRng, state: &mut State, action: &Action) {
+    if let Some(active) = &state.in_play_pokemon[action.actor][0] {
+        if active.get_name() == "Mew ex" {
+            let removed = state.in_play_pokemon[action.actor][0].take().unwrap();
+            state.hands[action.actor].push(removed.card);
+            state.trigger_promotion_or_declare_winner(action.actor);
+        }
+    }
+}
+
+fn barry_effect(_rng: &mut StdRng, state: &mut State, _action: &Action) {
+    state.add_turn_effect(TurnEffect::BarryEnergyReduction, 1);
+}
+
+fn hiker_effect(_rng: &mut StdRng, _state: &mut State, _action: &Action) {}
+fn morty_effect(_rng: &mut StdRng, _state: &mut State, _action: &Action) {}
+fn hand_scope_effect(_rng: &mut StdRng, _state: &mut State, _action: &Action) {}
+fn pokedex_effect(_rng: &mut StdRng, _state: &mut State, _action: &Action) {}
 
 #[cfg(test)]
 mod tests {

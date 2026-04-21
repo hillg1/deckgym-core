@@ -397,6 +397,36 @@ pub static EFFECT_ABILITY_MECHANIC_MAP: LazyLock<HashMap<&'static str, AbilityMe
             AbilityMechanic::BadDreamsEndOfTurn { amount: 20 },
         );
         map.insert("Once during your turn, you may switch your Active [M] Pokémon with 1 of your Benched Pokémon.", AbilityMechanic::SwitchActiveTypedWithBench { energy_type: EnergyType::Metal });
+        // ── Missing ability effects found during benchmarks ──
+        map.insert(
+            "Once during your turn, you may take 1 [P] Energy from your Energy Zone and attach it to 1 of your [P] Pokémon. If you do, put 2 damage counters on that Pokémon.",
+            AbilityMechanic::PsyShadow,
+        );
+        // Smeargle (B2 130) — Portrait
+        map.insert(
+            "Once during your turn, if this Pokémon is in the Active Spot, you may look at a random Supporter card from your opponent's hand. Use the effect of that card as the effect of this Ability.",
+            AbilityMechanic::SmearglePortrait,
+        );
+        // Pyukumuku (A3 054) — Innards Out
+        map.insert(
+            "If this Pokémon is in the Active Spot and is Knocked Out by damage from an attack from your opponent's Pokémon, do 50 damage to the Attacking Pokémon.",
+            AbilityMechanic::KOCounterattackDamage { amount: 50 },
+        );
+        // Latios (B2 217) — Fantastical Floating
+        map.insert(
+            "If you have Latias in play, this Pokémon has no Retreat Cost.",
+            AbilityMechanic::NoRetreatIfAnyPokemonInPlay { required_pokemon_names: vec!["Latias".to_string()] },
+        );
+        // Unown (A4 085) — POWER
+        map.insert(
+            "This Ability works if you have any Unown in play with an Ability other than POWER. Attacks used by your Pokémon do +10 damage to your opponent's Active Pokémon.",
+            AbilityMechanic::UnownPower,
+        );
+        // Klefki (B1 330) — Dismantling Keys
+        map.insert(
+            "Once during your turn, if this Pokémon is on your Bench, you may discard all Pokémon Tools from your opponent's Active Pokémon. If you do, discard this Pokémon.",
+            AbilityMechanic::DiscardOpponentActiveToolsAndSelfDiscard,
+        );
         map
     });
 

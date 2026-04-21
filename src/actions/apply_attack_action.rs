@@ -211,6 +211,9 @@ fn forecast_effect_attack_by_mechanic(
         Mechanic::ChargeYourTypeAnyWay { energy_type, count } => {
             charge_energy_any_way_to_type(attack.fixed_damage, *energy_type, *count)
         }
+        Mechanic::ChargePsychicByName { names } => {
+            charge_psychic_by_name(attack.fixed_damage, names.clone())
+        }
         Mechanic::ManaphyOceanicGift => manaphy_oceanic(),
         Mechanic::PalkiaExDimensionalStorm => palkia_dimensional_storm(state),
         Mechanic::MegaBlazikenExMegaBurningAttack => mega_burning_attack(attack),
@@ -438,6 +441,9 @@ fn forecast_effect_attack_by_mechanic(
         Mechanic::DamageMultiplierPerSpecificAttackUse { attack_name, damage_per_use } => {
             damage_multiplier_per_specific_attack_use(state, attack_name, *damage_per_use)
         }
+        Mechanic::RollingFrenzyStacks { damage_per_stack } => {
+            rolling_frenzy_attack(attack.fixed_damage, *damage_per_stack)
+        }
         Mechanic::RecoilIfKo { self_damage } => {
             recoil_if_ko_attack(attack.fixed_damage, *self_damage)
         }
@@ -574,6 +580,89 @@ fn forecast_effect_attack_by_mechanic(
         }
         Mechanic::ExtraDamageIfDefenderPoisoned { extra_damage } => {
             extra_damage_if_defender_poisoned(state, attack.fixed_damage, *extra_damage)
+        }
+        Mechanic::DamageOneOpponentPokemonPerItsEnergy { damage_per_energy } => {
+            damage_one_opponent_pokemon_per_its_energy(state, *damage_per_energy)
+        }
+        Mechanic::SearchRandomEvolutionToHand => search_random_evolution_to_hand(state),
+        Mechanic::ExtraDamageIfDefenderHasAbility { extra_damage } => {
+            extra_damage_if_defender_has_ability(state, attack.fixed_damage, *extra_damage)
+        }
+        Mechanic::ExtraDamageIfOpponentActiveHasTool { extra_damage } => {
+            extra_damage_if_opponent_active_has_tool(state, attack.fixed_damage, *extra_damage)
+        }
+        Mechanic::MimicAttack => mimic_attack(),
+        Mechanic::CoinFlipCardEffectOnTails { effect, duration } => {
+            coin_flip_card_effect_on_tails_attack(attack.fixed_damage, effect.clone(), *duration)
+        }
+        Mechanic::ChoiceBenchHeal { amount } => choice_bench_heal(state, *amount),
+        Mechanic::ChoiceInPlayHeal { amount } => choice_in_play_heal(state, *amount),
+        Mechanic::DamageAndNextTurnEffect { effect } => {
+            damage_and_next_turn_only_effect_attack(attack.fixed_damage, effect.clone())
+        }
+        Mechanic::HealSelfDamageDealt => heal_self_damage_dealt_attack(attack.fixed_damage),
+        Mechanic::CoinFlipSelfDamageOnTails { amount } => {
+            coin_flip_self_damage_on_tails_attack(attack.fixed_damage, *amount)
+        }
+        Mechanic::ExtraDamageIfAnyBenchedHurt { extra_damage } => {
+            extra_damage_if_any_benched_hurt_attack(state, attack.fixed_damage, *extra_damage)
+        }
+        Mechanic::HoOhExPhoenixTurbo => ho_oh_ex_phoenix_turbo(),
+        Mechanic::ExtraDamageIfStadiumInPlay { .. } => {
+            // Stadiums are not tracked by the engine, so treat as base damage only.
+            active_damage_doutcome(attack.fixed_damage)
+        }
+        Mechanic::DiscardStadium => {
+            // Stadiums are not tracked by the engine, so just do base damage.
+            active_damage_doutcome(attack.fixed_damage)
+        }
+        Mechanic::RequireBenchPokemonAndDiscardAllEnergy { .. } => {
+            // Mesprit's Supreme Blast: discard all energy from self after attacking.
+            // The bench requirement check is handled at move generation time; here we just
+            // apply the attack and discard all energy.
+            active_damage_effect_doutcome(attack.fixed_damage, |_, state, action| {
+                let active = state.get_active_mut(action.actor);
+                active.attached_energy.clear();
+            })
+        }
+        Mechanic::CoinFlipCopyOpponentActiveAttack => {
+            // Mimikyu's Try to Imitate: Flip a coin. If heads, copy opponent active's attack.
+            Outcomes::binary_coin(
+                Box::new(|_, state, action| {
+                    // Heads: copy opponent's active attack
+                    let source = CopyAttackSource::OpponentActive;
+                    let choices =
+                        copied_attack_choices(state, action.actor, &source, false);
+                    if !choices.is_empty() {
+                        state.move_generation_stack.push((action.actor, choices));
+                    }
+                }),
+                // Tails: attack does nothing
+                Box::new(|_, _, _| {}),
+            )
+        }
+        Mechanic::CopyRandomOpponentAttack => {
+            // Mew's Miraculous Memory: Copy a random attack from opponent's hand and deck.
+            // Simplified: copy a random attack from opponent's in-play Pokémon instead,
+            // since we can't enumerate hand/deck attack effects easily.
+            let source = CopyAttackSource::OpponentInPlay;
+            active_damage_effect_doutcome(0, move |_, state, action| {
+                let choices =
+                    copied_attack_choices(state, action.actor, &source, false);
+                if !choices.is_empty() {
+                    state.move_generation_stack.push((action.actor, choices));
+                }
+            })
+        }
+        Mechanic::RevealOpponentHand => {
+            // Information-only effect. No-op in simulator for now.
+            active_damage_doutcome(attack.fixed_damage)
+        }
+        Mechanic::AlsoChoiceInPlayDamage { opponent, damage } => {
+            also_choice_in_play_damage(state, *opponent, attack.fixed_damage, *damage)
+        }
+        Mechanic::ChangeRandomAttachedEnergyType { allowed_types } => {
+            change_random_attached_energy_type(attack.fixed_damage, allowed_types.clone())
         }
     }
 }
@@ -1176,6 +1265,56 @@ fn also_choice_bench_damage(
     ))
 }
 
+fn also_choice_in_play_damage(
+    state: &State,
+    opponent: bool,
+    active_damage: u32,
+    in_play_damage: u32,
+) -> Outcomes {
+    let opponent_player = (state.current_player + 1) % 2;
+    let side_target = if opponent {
+        opponent_player
+    } else {
+        state.current_player
+    };
+    let choices: Vec<_> = state
+        .enumerate_in_play_pokemon(side_target)
+        .map(|(in_play_idx, _)| {
+            let targets = vec![
+                (active_damage, opponent_player, 0),
+                (in_play_damage, side_target, in_play_idx),
+            ];
+            SimpleAction::ApplyDamage {
+                attacking_ref: (state.current_player, 0),
+                targets,
+                is_from_active_attack: true,
+            }
+        })
+        .collect();
+    Outcomes::single(Box::new(
+        move |_: &mut StdRng, state: &mut State, action: &Action| {
+            if !choices.is_empty() {
+                state.move_generation_stack.push((action.actor, choices));
+            }
+        },
+    ))
+}
+
+fn change_random_attached_energy_type(
+    fixed_damage: u32,
+    allowed_types: Vec<EnergyType>,
+) -> Outcomes {
+    active_damage_effect_doutcome(fixed_damage, move |rng, state, action| {
+        let opponent = (action.actor + 1) % 2;
+        let active = state.get_active_mut(opponent);
+        if !active.attached_energy.is_empty() {
+            let energy_idx = rng.gen_range(0..active.attached_energy.len());
+            let type_idx = rng.gen_range(0..allowed_types.len());
+            active.attached_energy[energy_idx] = allowed_types[type_idx];
+        }
+    })
+}
+
 fn self_charge_active_from_energies(damage: u32, energies: Vec<EnergyType>) -> Outcomes {
     active_damage_effect_doutcome(damage, move |_, state, action| {
         for energy in &energies {
@@ -1512,6 +1651,14 @@ fn damage_and_turn_effect_attack(damage: u32, effect: TurnEffect, effect_duratio
     let effect_clone = effect.clone();
     active_damage_effect_doutcome(damage, move |_, state, _| {
         state.add_turn_effect(effect_clone.clone(), effect_duration);
+    })
+}
+
+fn damage_and_next_turn_only_effect_attack(damage: u32, effect: TurnEffect) -> Outcomes {
+    let effect_clone = effect.clone();
+    active_damage_effect_doutcome(damage, move |_, state, _| {
+        // Adds the effect ONLY to the turn count + 2 (the next turn of this player)
+        state.add_turn_effect_at_offset(effect_clone.clone(), 2);
     })
 }
 
@@ -3214,4 +3361,247 @@ fn damage_multiplier_per_specific_attack_use(
         uses = state.sweets_relay_uses_per_game[state.current_player];
     }
     Outcomes::single(active_damage_mutation(uses as u32 * damage_per_use))
+}
+
+fn damage_one_opponent_pokemon_per_its_energy(state: &State, damage_per_energy: u32) -> Outcomes {
+    let opponent = (state.current_player + 1) % 2;
+    let choices: Vec<_> = state.enumerate_in_play_pokemon(opponent)
+        .map(|(in_play_idx, pokemon)| {
+            let energy_count = pokemon.get_effective_attached_energy(state, opponent).len() as u32;
+            let damage = energy_count * damage_per_energy;
+            let targets = vec![(damage, opponent, in_play_idx)];
+            SimpleAction::ApplyDamage {
+                attacking_ref: (state.current_player, 0),
+                targets,
+                is_from_active_attack: true,
+            }
+        })
+        .collect();
+    if choices.is_empty() {
+        return active_damage_doutcome(0); // Should not happen
+    }
+    Outcomes::single(Box::new(move |_, state, action| {
+        state.move_generation_stack.push((action.actor, choices.clone()));
+    }))
+}
+
+fn search_random_evolution_to_hand(state: &State) -> Outcomes {
+    let active = state.get_active(state.current_player);
+    let name = active.get_name();
+    
+    active_damage_effect_doutcome(0, move |rng, state, action| {
+        let deck = &mut state.decks[action.actor];
+        let mut valid_indices = Vec::new();
+        for (i, card) in deck.cards.iter().enumerate() {
+            if let Card::Pokemon(ref p) = card {
+                if p.evolves_from.as_deref() == Some(name.as_str()) {
+                    valid_indices.push(i);
+                }
+            }
+        }
+        if valid_indices.is_empty() {
+            return;
+        }
+        let chosen_idx = valid_indices[rng.gen_range(0..valid_indices.len())];
+        let card = deck.cards.remove(chosen_idx);
+        state.hands[action.actor].push(card);
+        state.decks[action.actor].shuffle(false, rng);
+    })
+}
+
+fn extra_damage_if_defender_has_ability(state: &State, base_damage: u32, extra_damage: u32) -> Outcomes {
+    let opponent = (state.current_player + 1) % 2;
+    let defender = state.get_active(opponent);
+    let damage = if crate::actions::get_ability_mechanic(&defender.card).is_some() {
+        base_damage + extra_damage
+    } else {
+        base_damage
+    };
+    active_damage_doutcome(damage)
+}
+
+fn extra_damage_if_opponent_active_has_tool(state: &State, base_damage: u32, extra_damage: u32) -> Outcomes {
+    let opponent = (state.current_player + 1) % 2;
+    let defender = state.get_active(opponent);
+    let damage = if defender.attached_tool.is_some() {
+        base_damage + extra_damage
+    } else {
+        base_damage
+    };
+    active_damage_doutcome(damage)
+}
+
+fn mimic_attack() -> Outcomes {
+    active_damage_effect_doutcome(0, move |rng, state, action| {
+        let opponent = (action.actor + 1) % 2;
+        let opp_hand_len = state.hands[opponent].len();
+        
+        let mut hand = std::mem::take(&mut state.hands[action.actor]);
+        state.decks[action.actor].cards.append(&mut hand);
+        state.decks[action.actor].shuffle(false, rng);
+        for _ in 0..opp_hand_len {
+            state.maybe_draw_card(action.actor);
+        }
+    })
+}
+
+fn coin_flip_card_effect_on_tails_attack(fixed_damage: u32, effect: CardEffect, duration: u8) -> Outcomes {
+    Outcomes::binary_coin(
+        active_damage_mutation(fixed_damage),
+        active_damage_effect_mutation(fixed_damage, move |_, state, action| {
+            state.get_active_mut(action.actor).add_effect(effect.clone(), duration);
+        })
+    )
+}
+
+fn choice_bench_heal(state: &State, amount: u32) -> Outcomes {
+    let choices: Vec<_> = state.enumerate_bench_pokemon(state.current_player)
+        .map(|(in_play_idx, _)| {
+            SimpleAction::Heal {
+                in_play_idx,
+                amount,
+                cure_status: false,
+            }
+        })
+        .collect();
+    
+    if choices.is_empty() {
+        return active_damage_doutcome(0);
+    }
+    
+    Outcomes::single(Box::new(move |_, state, action| {
+        state.move_generation_stack.push((action.actor, choices.clone()));
+    }))
+}
+
+fn heal_self_damage_dealt_attack(fixed_damage: u32) -> Outcomes {
+    Outcomes::single(Box::new(move |_, state, action| {
+        let opponent = (action.actor + 1) % 2;
+        let attacking_ref = (action.actor, 0);
+        let targets = vec![(fixed_damage, opponent, 0)];
+        handle_damage_only(state, attacking_ref, &targets, true, None);
+        
+        let actual_damage = fixed_damage;
+        
+        if actual_damage > 0 {
+            if let Some(attacker) = state.in_play_pokemon[action.actor][0].as_mut() {
+                attacker.heal(actual_damage);
+            }
+        }
+        
+        handle_knockouts(state, attacking_ref, true);
+    }))
+}
+
+fn coin_flip_self_damage_on_tails_attack(fixed_damage: u32, amount: u32) -> Outcomes {
+    Outcomes::binary_coin(
+        active_damage_mutation(fixed_damage),
+        active_damage_effect_mutation(fixed_damage, move |_, state, action| {
+            if let Some(p) = state.in_play_pokemon[action.actor][0].as_mut() {
+                p.apply_damage(amount);
+            }
+        })
+    )
+}
+
+fn extra_damage_if_any_benched_hurt_attack(state: &State, base_damage: u32, extra_damage: u32) -> Outcomes {
+    let any_hurt = state.enumerate_bench_pokemon(state.current_player).any(|(_, p)| p.is_damaged());
+    let damage = if any_hurt { base_damage + extra_damage } else { base_damage };
+    active_damage_doutcome(damage)
+}
+
+fn ho_oh_ex_phoenix_turbo() -> Outcomes {
+    active_damage_effect_doutcome(80, move |rng, state, action| {
+        const NEEDED_ENTRIES: [EnergyType; 3] = [EnergyType::Fire, EnergyType::Water, EnergyType::Lightning];
+        
+        let mut available = Vec::new();
+        for needed in NEEDED_ENTRIES {
+            if state.discard_energies[action.actor].iter().any(|e| *e == needed) {
+                available.push(needed);
+            }
+        }
+        
+        if available.is_empty() {
+            return;
+        }
+        
+        let benched_basics: Vec<usize> = state.enumerate_bench_pokemon(action.actor)
+            .filter(|(_, p)| get_stage(*p) == 0)
+            .map(|(idx, _)| idx)
+            .collect();
+            
+        if benched_basics.is_empty() {
+            return;
+        }
+
+        for needed in available {
+            if let Some(pos) = state.discard_energies[action.actor].iter().position(|e| *e == needed) {
+                state.discard_energies[action.actor].swap_remove(pos);
+            }
+            let chosen_idx = benched_basics[rng.gen_range(0..benched_basics.len())];
+            state.in_play_pokemon[action.actor][chosen_idx].as_mut().unwrap().attached_energy.push(needed);
+        }
+    })
+}
+
+fn rolling_frenzy_attack(base_damage: u32, damage_per_stack: u32) -> Outcomes {
+    Outcomes::single_fn(move |_, state, action| {
+        let opponent = (action.actor + 1) % 2;
+        let bonus = {
+            let active = state.get_active_mut(action.actor);
+            let b = active.rolling_frenzy_stacks * damage_per_stack;
+            active.rolling_frenzy_stacks += 1;
+            b
+        };
+        let total = base_damage + bonus;
+        crate::actions::apply_action_helpers::handle_damage(
+            state,
+            (action.actor, 0),
+            &[(total, opponent, 0)],
+            true,
+            None,
+        );
+    })
+}
+
+fn charge_psychic_by_name(damage: u32, names: Vec<String>) -> Outcomes {
+    active_damage_effect_doutcome(damage, move |_, state, action| {
+        let target_indices: Vec<usize> = state
+            .enumerate_in_play_pokemon(action.actor)
+            .filter(|(_, p)| names.contains(&p.card.get_name()))
+            .map(|(idx, _)| idx)
+            .collect();
+
+        if !target_indices.is_empty() {
+            let choices = energy_any_way_choices(&target_indices, EnergyType::Psychic, 1);
+            if !choices.is_empty() {
+                state
+                    .move_generation_stack
+                    .push((action.actor, choices));
+            }
+        }
+    })
+}
+
+fn choice_in_play_heal(state: &State, amount: u32) -> Outcomes {
+    let mut choices = Vec::new();
+    for (in_play_idx, p) in state.enumerate_in_play_pokemon(state.current_player) {
+        if p.is_damaged() {
+            choices.push(SimpleAction::Heal {
+                in_play_idx,
+                amount,
+                cure_status: false,
+            });
+        }
+    }
+
+    if choices.is_empty() {
+        return active_damage_doutcome(0);
+    }
+
+    Outcomes::single(Box::new(move |_, state, action| {
+        state
+            .move_generation_stack
+            .push((action.actor, choices.clone()));
+    }))
 }

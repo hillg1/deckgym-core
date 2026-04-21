@@ -161,6 +161,7 @@ fn forecast_ability_by_mechanic(
         AbilityMechanic::EndTurnHealSelfIfActive { .. } => {
             panic!("EndTurnHealSelfIfActive is triggered at end of turn")
         }
+        AbilityMechanic::PsyShadow => psy_shadow_outcome(),
         AbilityMechanic::DiscardEnergyToIncreaseTypeDamage {
             discard_energy,
             attack_type,
@@ -246,6 +247,15 @@ fn forecast_ability_by_mechanic(
         }
         AbilityMechanic::ImmuneToStatusIfHasEnergyType { .. } => {
             panic!("ImmuneToStatusIfHasEnergyType is a passive ability")
+        }
+        AbilityMechanic::SmearglePortrait => {
+            // Simplified: draw a card as a rough approximation of copying a random supporter
+            Outcomes::single_fn(|_rng, state, action| {
+                state.queue_draw_action(action.actor, 1);
+            })
+        }
+        AbilityMechanic::KOCounterattackDamage { .. } => {
+            panic!("KOCounterattackDamage is a passive ability")
         }
     }
 }
@@ -654,6 +664,22 @@ fn discard_opponent_active_tools_and_self_discard(in_play_idx: usize) -> Outcome
             
             // If the active was discarded (no, Klefki was on bench so active wasn't discarded, but check if we discarded Klefki from active spot anyway)
             // Wait, we enforce it's used from bench, so in_play_idx != 0.
+        }
+    })
+}
+fn psy_shadow_outcome() -> Outcomes {
+    Outcomes::single_fn(|_, state, action| {
+        let acting_player = action.actor;
+        let choices = state
+            .enumerate_in_play_pokemon(acting_player)
+            .filter(|(_, pokemon)| pokemon.card.get_type() == Some(EnergyType::Psychic))
+            .map(|(in_play_idx, _)| SimpleAction::AttachAndDamage {
+                attachments: vec![(1, EnergyType::Psychic, in_play_idx)],
+                damage: 20,
+            })
+            .collect::<Vec<_>>();
+        if !choices.is_empty() {
+            state.move_generation_stack.push((acting_player, choices));
         }
     })
 }
