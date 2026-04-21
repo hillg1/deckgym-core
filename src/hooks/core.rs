@@ -148,6 +148,46 @@ pub(crate) fn on_end_turn(player_ending_turn: usize, state: &mut State) {
         }
     }
 
+    // Leftovers Tool check
+    let has_leftovers = has_tool(state.get_active(player_ending_turn), CardId::A3b067Leftovers);
+    if has_leftovers {
+        debug!("Leftovers: Healing 10 damage from active");
+        state.get_active_mut(player_ending_turn).heal(10);
+    }
+
+    // Sitrus and Lum Berry Tool check
+    for p in 0..2 {
+        let mut remove_sitrus_indices = vec![];
+        for (idx, pokemon) in state.enumerate_in_play_pokemon(p) {
+            if has_tool(pokemon, CardId::B1218SitrusBerry) {
+                let max_hp = pokemon.get_effective_total_hp();
+                if pokemon.get_remaining_hp() <= max_hp / 2 && pokemon.get_remaining_hp() < max_hp {
+                    remove_sitrus_indices.push(idx);
+                }
+            }
+        }
+        for idx in remove_sitrus_indices {
+            debug!("Sitrus Berry: Healing 30 damage from player {} pokemon {}", p, idx);
+            state.in_play_pokemon[p][idx].as_mut().unwrap().heal(30);
+            state.discard_tool(p, idx);
+        }
+
+        // Lum Berry Tool check
+        let mut remove_lum_indices = vec![];
+        for (idx, pokemon) in state.enumerate_in_play_pokemon(p) {
+            if has_tool(pokemon, CardId::A2149LumBerry) {
+                if pokemon.has_status_condition() {
+                    remove_lum_indices.push(idx);
+                }
+            }
+        }
+        for idx in remove_lum_indices {
+            debug!("Lum Berry: Clearing all status conditions from player {} pokemon {}", p, idx);
+            state.in_play_pokemon[p][idx].as_mut().unwrap().cure_status_conditions();
+            state.discard_tool(p, idx);
+        }
+    }
+
     // Process delayed damage effects on active Pokemon
     // Delayed damage triggers at the end of the opponent's turn (when their turn ends, the effect expires)
     let total_delayed_damage: u32 = state
@@ -802,6 +842,15 @@ pub(crate) fn modify_damage(
         0
     };
 
+    // Beastite damage bonus
+    let mut beastite_damage_bonus = 0;
+    if is_active_to_active && crate::tools::has_tool(attacking_pokemon, CardId::A3a066Beastite) {
+        if crate::hooks::is_ultra_beast(&attacking_pokemon.get_name()) {
+            let points_won = state.points[attacking_player] as u32;
+            beastite_damage_bonus = points_won * 10;
+        }
+    }
+
     let unown_power_boost = if target_idx == 0 && target_player != attacking_player {
         get_unown_power_boost(state, attacking_player)
     } else {
@@ -833,7 +882,8 @@ pub(crate) fn modify_damage(
         + increased_attack_specific_modifiers
         + type_boost_bonus
         + stadium_damage_bonus
-        + unown_power_boost)
+        + unown_power_boost
+        + beastite_damage_bonus)
         .saturating_sub(
             reduced_card_effect_modifiers
                 + reduced_turn_effect_modifiers

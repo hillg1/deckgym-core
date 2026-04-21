@@ -52,6 +52,16 @@ static METAL_CORE_BARRIER_EFFECT: LazyLock<String> =
     LazyLock::new(|| tool_effect_text_from_card_id(CardId::B2148MetalCoreBarrier));
 static BIG_AIR_BALLOON_EFFECT: LazyLock<String> =
     LazyLock::new(|| tool_effect_text_from_card_id(CardId::B2a087BigAirBalloon));
+static LEFTOVERS_EFFECT: LazyLock<String> =
+    LazyLock::new(|| tool_effect_text_from_card_id(CardId::A3b067Leftovers));
+static DARK_PENDANT_EFFECT: LazyLock<String> =
+    LazyLock::new(|| tool_effect_text_from_card_id(CardId::A4154DarkPendant));
+static BEASTITE_EFFECT: LazyLock<String> =
+    LazyLock::new(|| tool_effect_text_from_card_id(CardId::A3a066Beastite));
+static SITRUS_BERRY_EFFECT: LazyLock<String> =
+    LazyLock::new(|| tool_effect_text_from_card_id(CardId::B1218SitrusBerry));
+static LUM_BERRY_EFFECT: LazyLock<String> =
+    LazyLock::new(|| tool_effect_text_from_card_id(CardId::A2149LumBerry));
 
 pub fn tool_effects_equal(trainer_card: &TrainerCard, reference_tool_id: CardId) -> bool {
     ensure_tool_trainer(trainer_card);
@@ -84,6 +94,12 @@ pub fn can_attach_tool_to(trainer_card: &TrainerCard, pokemon: &PlayedCard) -> b
     }
     if effect == METAL_CORE_BARRIER_EFFECT.as_str() {
         return pokemon.card.get_type() == Some(EnergyType::Metal);
+    }
+    if effect == DARK_PENDANT_EFFECT.as_str() {
+        return pokemon.card.get_type() == Some(EnergyType::Darkness);
+    }
+    if effect == BEASTITE_EFFECT.as_str() {
+        return crate::hooks::is_ultra_beast(&pokemon.get_name());
     }
     if effect == BIG_AIR_BALLOON_EFFECT.as_str() {
         return matches!(&pokemon.card, Card::Pokemon(p) if p.stage == 2);
@@ -120,5 +136,10 @@ pub fn is_tool_effect_implemented(trainer_card: &TrainerCard) -> bool {
             || e == PROTECTIVE_PONCHO_EFFECT.as_str()
             || e == METAL_CORE_BARRIER_EFFECT.as_str()
             || e == BIG_AIR_BALLOON_EFFECT.as_str()
+            || e == LEFTOVERS_EFFECT.as_str()
+            || e == DARK_PENDANT_EFFECT.as_str()
+            || e == BEASTITE_EFFECT.as_str()
+            || e == SITRUS_BERRY_EFFECT.as_str()
+            || e == LUM_BERRY_EFFECT.as_str()
     )
 }

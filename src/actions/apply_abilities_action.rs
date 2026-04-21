@@ -162,6 +162,7 @@ fn forecast_ability_by_mechanic(
             panic!("EndTurnHealSelfIfActive is triggered at end of turn")
         }
         AbilityMechanic::PsyShadow => psy_shadow_outcome(),
+        AbilityMechanic::PsychicConnect => psychic_connect_outcome(),
         AbilityMechanic::DiscardEnergyToIncreaseTypeDamage {
             discard_energy,
             attack_type,
@@ -680,6 +681,28 @@ fn psy_shadow_outcome() -> Outcomes {
             .collect::<Vec<_>>();
         if !choices.is_empty() {
             state.move_generation_stack.push((acting_player, choices));
+        }
+    })
+}
+
+fn psychic_connect_outcome() -> Outcomes {
+    Outcomes::single_fn(|_rng, state, action| {
+        let acting_player = action.actor;
+        let possible_moves = state
+            .enumerate_bench_pokemon(acting_player)
+            .filter(|(_, pokemon)| {
+                pokemon.card.get_type() == Some(EnergyType::Psychic)
+                    && pokemon.attached_energy.contains(&EnergyType::Psychic)
+            })
+            .map(|(in_play_idx, pokemon)| SimpleAction::MoveEnergy {
+                from_in_play_idx: in_play_idx,
+                to_in_play_idx: 0,
+                energy_type: EnergyType::Psychic,
+                amount: pokemon.attached_energy.iter().filter(|&&e| e == EnergyType::Psychic).count() as u32,
+            })
+            .collect::<Vec<_>>();
+        if !possible_moves.is_empty() {
+            state.move_generation_stack.push((acting_player, possible_moves));
         }
     })
 }

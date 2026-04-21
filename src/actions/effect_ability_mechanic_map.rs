@@ -427,6 +427,7 @@ pub static EFFECT_ABILITY_MECHANIC_MAP: LazyLock<HashMap<&'static str, AbilityMe
             "Once during your turn, if this Pokémon is on your Bench, you may discard all Pokémon Tools from your opponent's Active Pokémon. If you do, discard this Pokémon.",
             AbilityMechanic::DiscardOpponentActiveToolsAndSelfDiscard,
         );
+        map.insert("Once during your turn, you may move all [P] Energy from 1 of your Benched [P] Pokémon to your Active Pokémon.", AbilityMechanic::PsychicConnect);
         map
     });
 

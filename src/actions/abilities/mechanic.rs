@@ -181,4 +181,5 @@ pub enum AbilityMechanic {
     /// from your Energy Zone and attach it to 1 of your [P] Pokémon.
     /// If you do, put 2 damage counters on that Pokémon.
     PsyShadow,
+    PsychicConnect,
 }

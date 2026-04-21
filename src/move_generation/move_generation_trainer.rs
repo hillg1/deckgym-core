@@ -145,6 +145,8 @@ pub fn trainer_move_generation_implementation(
         | CardId::PA005PokeBall
         | CardId::A2b111PokeBall
         | CardId::PA006RedCard
+        | CardId::PA008PokedEx
+        | CardId::PA003HandScope
         | CardId::PA007ProfessorsResearch
         | CardId::A4b373ProfessorsResearch
         | CardId::A1223Giovanni
@@ -215,10 +217,52 @@ pub fn trainer_move_generation_implementation(
         CardId::A3b068Hau | CardId::A3b085Hau => can_play_trainer(state, trainer_card),
         CardId::A3142BigMalasada => can_play_big_malasada(state, trainer_card),
         CardId::B2150Sightseer | CardId::B2191Sightseer => can_play_trainer(state, trainer_card),
+        CardId::A2a074Barry | CardId::A2a089Barry => can_play_trainer(state, trainer_card),
+        CardId::A1a066BuddingExpeditioner | CardId::A1a080BuddingExpeditioner => {
+            can_play_budding_expeditioner(state, trainer_card)
+        }
+        CardId::A4a071Morty | CardId::A4a085Morty => can_play_trainer(state, trainer_card),
+        CardId::A4161Hiker | CardId::A4201Hiker => can_play_trainer(state, trainer_card),
+        CardId::A1a067Blue | CardId::A1a081Blue => can_play_trainer(state, trainer_card),
+        CardId::A1226LtSurge | CardId::A1273LtSurge => can_play_lt_surge(state, trainer_card),
+        CardId::A1a064PokemonFlute => can_play_pokemon_flute(state, trainer_card),
         CardId::A2b072TeamRocketGrunt | CardId::A2b091TeamRocketGrunt => {
             can_play_team_rocket_grunt(state, trainer_card)
         }
         _ => None,
+    }
+}
+
+fn can_play_budding_expeditioner(state: &State, trainer_card: &TrainerCard) -> Option<Vec<SimpleAction>> {
+    let active = state.get_active(state.current_player);
+    if active.get_name() == "Mew ex" {
+        can_play_trainer(state, trainer_card)
+    } else {
+        cannot_play_trainer()
+    }
+}
+
+fn can_play_lt_surge(state: &State, trainer_card: &TrainerCard) -> Option<Vec<SimpleAction>> {
+    let active = state.get_active(state.current_player);
+    let name = active.get_name();
+    if name == "Raichu" || name == "Electrode" || name == "Electabuzz" {
+        can_play_trainer(state, trainer_card)
+    } else {
+        cannot_play_trainer()
+    }
+}
+
+fn can_play_pokemon_flute(state: &State, trainer_card: &TrainerCard) -> Option<Vec<SimpleAction>> {
+    let opponent = (state.current_player + 1) % 2;
+    let opponent_bench_full = state.enumerate_bench_pokemon(opponent).count() == 3;
+    if opponent_bench_full {
+        return cannot_play_trainer();
+    }
+    let has_basic_in_discard = state.discard_piles[opponent].iter().any(|c| c.is_basic());
+    if has_basic_in_discard {
+        can_play_trainer(state, trainer_card)
+    } else {
+        cannot_play_trainer()
     }
 }
 
