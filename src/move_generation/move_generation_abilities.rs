@@ -171,6 +171,15 @@ fn can_use_ability_by_mechanic(
                     .enumerate_in_play_pokemon(state.current_player)
                     .any(|(_, p)| p.card.get_type() == Some(EnergyType::Psychic))
         }
+        AbilityMechanic::PsychicConnect => {
+            !card.ability_used
+                && state
+                    .enumerate_bench_pokemon(state.current_player)
+                    .any(|(_, p)| {
+                        p.card.get_type() == Some(EnergyType::Psychic)
+                            && p.attached_energy.contains(&EnergyType::Psychic)
+                    }) // Bench has P energy on P pokemon
+        }
     }
 }
 

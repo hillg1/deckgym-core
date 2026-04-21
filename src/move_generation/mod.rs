@@ -233,7 +233,7 @@ fn generate_hand_actions(state: &State) -> Vec<SimpleAction> {
             }
             Card::Trainer(trainer_card) => {
                 let trainer_actions = generate_possible_trainer_actions(state, trainer_card)
-                    .expect("Trainer card not implemented");
+                    .unwrap_or_else(|| panic!("Trainer card not implemented: {} ({:?})", trainer_card.name, trainer_card.id));
                 actions.extend(trainer_actions);
             }
         });
