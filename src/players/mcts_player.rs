@@ -153,7 +153,7 @@ impl MctsNode {
                     -1.0
                 }
             }
-            Some(GameOutcome::Tie) | None => 0.0,
+            Some(GameOutcome::Tie) | None => -0.3,
         }
     }
 

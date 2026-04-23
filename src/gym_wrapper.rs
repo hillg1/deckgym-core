@@ -479,7 +479,7 @@ fn calculate_reward(winner: Option<GameOutcome>, agent_player: usize) -> f32 {
     match winner {
         Some(GameOutcome::Win(p)) if p == agent_player =>  1.0,
         Some(GameOutcome::Win(_))                      => -1.0,
-        _                                              =>  0.0,
+        _                                              => -0.3,
     }
 }
 
