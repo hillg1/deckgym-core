@@ -385,7 +385,10 @@ fn apply_return_pokemon_to_hand(acting_player: usize, state: &mut State, in_play
         .expect("Pokemon should be there if returning to hand");
     let mut cards_to_collect = played_card.cards_behind.clone();
     cards_to_collect.push(played_card.card.clone());
-    state.hands[acting_player].extend(cards_to_collect);
+    let overflow = state.add_cards_to_hand(acting_player, cards_to_collect);
+    if !overflow.is_empty() {
+        state.discard_piles[acting_player].extend(overflow);
+    }
 
     // If returning the active, trigger promotion or declare winner.
     if in_play_idx == 0 {

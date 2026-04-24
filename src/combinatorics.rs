@@ -1,3 +1,23 @@
+const MAX_COMBINATION_COUNT: u128 = 100_000;
+
+fn binomial_coefficient(n: usize, k: usize) -> u128 {
+    if k > n {
+        return 0;
+    }
+    if k == 0 || k == n {
+        return 1;
+    }
+
+    let k = k.min(n - k);
+    let mut result = 1u128;
+
+    for i in 0..k {
+        result = result * (n - i) as u128 / (i + 1) as u128;
+    }
+
+    result
+}
+
 /// Generate all k-combinations from a slice
 ///
 /// Returns all possible ways to choose k items from the input slice,
@@ -14,6 +34,19 @@
 /// // Returns: [[1, 2], [1, 3], [2, 3]]
 /// ```
 pub fn generate_combinations<T: Clone>(items: &[T], k: usize) -> Vec<Vec<T>> {
+    if k > items.len() {
+        return vec![];
+    }
+
+    let combination_count = binomial_coefficient(items.len(), k);
+    assert!(
+        combination_count <= MAX_COMBINATION_COUNT,
+        "Refusing to generate {} combinations for n={}, k={}",
+        combination_count,
+        items.len(),
+        k
+    );
+
     if k == 0 {
         return vec![vec![]];
     }
@@ -83,5 +116,12 @@ mod tests {
         let combos = generate_combinations(&items, 3);
         assert_eq!(combos.len(), 1); // C(3,3) = 1
         assert_eq!(combos[0], vec![1, 2, 3]);
+    }
+
+    #[test]
+    #[should_panic(expected = "Refusing to generate")]
+    fn test_generate_combinations_panics_when_too_large() {
+        let items: Vec<i32> = (0..30).collect();
+        let _ = generate_combinations(&items, 15);
     }
 }

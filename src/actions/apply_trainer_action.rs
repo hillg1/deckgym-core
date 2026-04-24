@@ -387,8 +387,9 @@ fn lucky_ice_pop_outcomes(_state: &State, _acting_player: usize) -> Outcomes {
                 .iter()
                 .position(|c| *c == card)
             {
-                state.discard_piles[action.actor].remove(pos);
-                state.hands[action.actor].push(card);
+                if state.try_add_card_to_hand(action.actor, card).is_ok() {
+                    state.discard_piles[action.actor].remove(pos);
+                }
             }
         }
     });
@@ -747,7 +748,10 @@ fn koga_effect(_: &mut StdRng, state: &mut State, action: &Action) {
         .expect("Active Pokemon should be there if Koga is played");
     let mut cards_to_collect = active_pokemon.cards_behind.clone();
     cards_to_collect.push(active_pokemon.card.clone());
-    state.hands[action.actor].extend(cards_to_collect);
+    let overflow = state.add_cards_to_hand(action.actor, cards_to_collect);
+    if !overflow.is_empty() {
+        state.discard_piles[action.actor].extend(overflow);
+    }
     // Energy dissapears
     state.in_play_pokemon[action.actor][0] = None;
 
@@ -1148,8 +1152,12 @@ fn celestic_town_elder_effect(acting_player: usize, state: &State) -> Outcomes {
                 .iter()
                 .position(|card| card == &pokemon)
             {
-                state.discard_piles[action.actor].remove(idx);
-                state.hands[action.actor].push(pokemon.clone());
+                if state
+                    .try_add_card_to_hand(action.actor, pokemon.clone())
+                    .is_ok()
+                {
+                    state.discard_piles[action.actor].remove(idx);
+                }
             }
         }));
     }
@@ -1332,7 +1340,9 @@ fn budding_expeditioner_effect(_rng: &mut StdRng, state: &mut State, action: &Ac
     if let Some(active) = &state.in_play_pokemon[action.actor][0] {
         if active.get_name() == "Mew ex" {
             let removed = state.in_play_pokemon[action.actor][0].take().unwrap();
-            state.hands[action.actor].push(removed.card);
+            if let Err(card) = state.try_add_card_to_hand(action.actor, removed.card) {
+                state.discard_piles[action.actor].push(card);
+            }
             state.trigger_promotion_or_declare_winner(action.actor);
         }
     }
@@ -1498,6 +1508,26 @@ mod tests {
 
         assert_eq!(state.hands[0].len(), 10);
         assert_eq!(state.decks[0].cards.len(), 1);
+    }
+
+    #[test]
+    fn test_koga_respects_hand_limit() {
+        let mut state = State::default();
+        state.hands[0] = (0..9)
+            .map(|_| get_card_by_enum(CardId::PA001Potion))
+            .collect();
+
+        let active = to_playable_card(&get_card_by_enum(CardId::A1001Bulbasaur), false);
+        let bench = to_playable_card(&get_card_by_enum(CardId::A1033Charmander), false);
+        let mut active = active;
+        active.cards_behind.push(get_card_by_enum(CardId::A1002Ivysaur));
+        state.in_play_pokemon[0][0] = Some(active);
+        state.in_play_pokemon[0][1] = Some(bench);
+
+        koga_effect(&mut StdRng::seed_from_u64(0), &mut state, &make_action());
+
+        assert_eq!(state.hands[0].len(), 10);
+        assert_eq!(state.discard_piles[0].len(), 1);
     }
 
     #[test]

@@ -176,6 +176,33 @@ impl State {
         self.discard_piles[current_player].push(card.clone());
     }
 
+    pub(crate) fn try_add_card_to_hand(&mut self, player: usize, card: Card) -> Result<(), Card> {
+        if self.hands[player].len() >= MAX_HAND_SIZE {
+            debug!(
+                "Player {} cannot receive {:?}, hand is already at the {} card limit",
+                player + 1,
+                canonical_name(&card),
+                MAX_HAND_SIZE
+            );
+            return Err(card);
+        }
+
+        self.hands[player].push(card);
+        Ok(())
+    }
+
+    pub(crate) fn add_cards_to_hand(&mut self, player: usize, cards: Vec<Card>) -> Vec<Card> {
+        let mut overflow = Vec::new();
+
+        for card in cards {
+            if let Err(card) = self.try_add_card_to_hand(player, card) {
+                overflow.push(card);
+            }
+        }
+
+        overflow
+    }
+
     /// Returns an iterator over supporter cards in a player's hand
     pub(crate) fn iter_hand_supporters(&self, player: usize) -> impl Iterator<Item = &Card> {
         self.hands[player].iter().filter(|card| card.is_support())
@@ -192,7 +219,8 @@ impl State {
         }
 
         if let Some(card) = self.decks[player].draw() {
-            self.hands[player].push(card.clone());
+            self.try_add_card_to_hand(player, card.clone())
+                .expect("checked hand capacity before drawing");
             debug!(
                 "Player {} drew: {:?}, now hand is: {:?} and deck has {} cards",
                 player + 1,
@@ -223,7 +251,8 @@ impl State {
             .position(|c| c == card)
             .expect("Card must exist in deck to transfer to hand");
         self.decks[player].cards.remove(pos);
-        self.hands[player].push(card.clone());
+        self.try_add_card_to_hand(player, card.clone())
+            .expect("checked hand capacity before transferring from deck");
     }
 
     pub(crate) fn transfer_card_from_hand_to_deck(&mut self, player: usize, card: &Card) {
@@ -545,22 +574,28 @@ impl State {
         let ko_pokemon = self.in_play_pokemon[ko_receiver][ko_pokemon_idx]
             .as_ref()
             .expect("There should be a Pokemon to rescue");
-            
+
         let mut returned_to_hand = ko_pokemon.cards_behind.clone();
         returned_to_hand.push(ko_pokemon.card.clone());
-        
+        let attached_energy = ko_pokemon.attached_energy.clone();
+
         let mut cards_to_discard = vec![];
         if let Some(tool_card) = &ko_pokemon.attached_tool {
             cards_to_discard.push(tool_card.clone());
         }
 
         debug!("Rescuing to hand: {returned_to_hand:?}, Discarding: {cards_to_discard:?}");
-        self.hands[ko_receiver].extend(returned_to_hand);
+        let overflow = self.add_cards_to_hand(ko_receiver, returned_to_hand);
+
+        if !overflow.is_empty() {
+            debug!("Hand limit reached during rescue, discarding overflow: {overflow:?}");
+            self.discard_piles[ko_receiver].extend(overflow);
+        }
         
         if !cards_to_discard.is_empty() {
             self.discard_piles[ko_receiver].extend(cards_to_discard);
         }
-        self.discard_energies[ko_receiver].extend(ko_pokemon.attached_energy.iter().cloned());
+        self.discard_energies[ko_receiver].extend(attached_energy);
         self.in_play_pokemon[ko_receiver][ko_pokemon_idx] = None;
     }
 
@@ -752,6 +787,27 @@ mod tests {
         assert_eq!(state.hands[0].len(), MAX_HAND_SIZE);
         assert_eq!(state.decks[0].cards.len(), deck_len_before);
         assert!(state.decks[0].cards.contains(&card));
+    }
+
+    #[test]
+    fn test_add_cards_to_hand_returns_overflow_at_hand_limit() {
+        let (deck_a, deck_b) = load_test_decks();
+        let mut state = State::new(&deck_a, &deck_b);
+        state.hands[0] = (0..9)
+            .map(|_| get_card_by_enum(CardId::PA001Potion))
+            .collect();
+
+        let overflow = state.add_cards_to_hand(
+            0,
+            vec![
+                get_card_by_enum(CardId::A1001Bulbasaur),
+                get_card_by_enum(CardId::A1033Charmander),
+            ],
+        );
+
+        assert_eq!(state.hands[0].len(), MAX_HAND_SIZE);
+        assert_eq!(overflow.len(), 1);
+        assert_eq!(overflow[0].get_name(), "Charmander");
     }
 
     #[test]
