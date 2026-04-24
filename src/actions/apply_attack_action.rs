@@ -3390,9 +3390,8 @@ fn search_random_evolution_to_hand(state: &State) -> Outcomes {
     let name = active.get_name();
     
     active_damage_effect_doutcome(0, move |rng, state, action| {
-        let deck = &mut state.decks[action.actor];
         let mut valid_indices = Vec::new();
-        for (i, card) in deck.cards.iter().enumerate() {
+        for (i, card) in state.decks[action.actor].cards.iter().enumerate() {
             if let Card::Pokemon(ref p) = card {
                 if p.evolves_from.as_deref() == Some(name.as_str()) {
                     valid_indices.push(i);
@@ -3403,8 +3402,8 @@ fn search_random_evolution_to_hand(state: &State) -> Outcomes {
             return;
         }
         let chosen_idx = valid_indices[rng.gen_range(0..valid_indices.len())];
-        let card = deck.cards.remove(chosen_idx);
-        state.hands[action.actor].push(card);
+        let card = state.decks[action.actor].cards[chosen_idx].clone();
+        state.transfer_card_from_deck_to_hand(action.actor, &card);
         state.decks[action.actor].shuffle(false, rng);
     })
 }
