@@ -387,4 +387,8 @@ pub enum Mechanic {
     RollingFrenzyStacks {
         damage_per_stack: u32,
     },
+    /// Drampa — Dragon Breath: Coin flip. Tails = attack does nothing. Heads = damage + inflict status.
+    CoinFlipNoEffectOrStatus {
+        condition: StatusCondition,
+    },
 }

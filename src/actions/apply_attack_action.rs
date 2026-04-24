@@ -664,6 +664,9 @@ fn forecast_effect_attack_by_mechanic(
         Mechanic::ChangeRandomAttachedEnergyType { allowed_types } => {
             change_random_attached_energy_type(attack.fixed_damage, allowed_types.clone())
         }
+        Mechanic::CoinFlipNoEffectOrStatus { condition } => {
+            coinflip_no_effect_or_status(attack.fixed_damage, *condition)
+        }
     }
 }
 
@@ -781,6 +784,18 @@ fn recoil_if_ko_attack(damage: u32, self_damage: u32) -> Outcomes {
 fn coinflip_no_effect(fixed_damage: u32) -> Outcomes {
     Outcomes::binary_coin(
         active_damage_mutation(fixed_damage),
+        active_damage_mutation(0),
+    )
+}
+
+/// Coin flip: heads = deal damage + inflict status, tails = nothing.
+/// Used by Drampa's Dragon Breath and similar attacks.
+fn coinflip_no_effect_or_status(fixed_damage: u32, condition: StatusCondition) -> Outcomes {
+    Outcomes::binary_coin(
+        active_damage_effect_mutation(fixed_damage, move |_, state, action| {
+            let opponent = (action.actor + 1) % 2;
+            state.apply_status_condition(opponent, 0, condition);
+        }),
         active_damage_mutation(0),
     )
 }
