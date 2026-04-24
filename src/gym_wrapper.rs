@@ -500,6 +500,19 @@ pub struct PocketGym {
     agent_player:    usize,
 }
 
+impl Drop for PocketGym {
+    fn drop(&mut self) {
+        // There is no separate arena allocator here, but dropping these fields explicitly
+        // ensures large game state buffers and queued actions are released as soon as Python
+        // drops the wrapper object.
+        self.current_state = None;
+        self.possible_actions.clear();
+        self.possible_actions.shrink_to_fit();
+        self.opponent_policy = None;
+        self.game_over = true;
+    }
+}
+
 #[pymethods]
 impl PocketGym {
     #[new]

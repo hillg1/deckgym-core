@@ -21,6 +21,7 @@ pub struct CoinSeq(pub Vec<bool>);
 pub enum CoinPaths {
     None,
     Exact(Vec<CoinSeq>),
+    BinomialByHeads { flips: usize, heads: usize },
 }
 
 #[derive(Debug)]
@@ -111,18 +112,30 @@ impl Outcomes {
         flips: usize,
         mut make_mutation: impl FnMut(usize) -> Mutation,
     ) -> Self {
-        let denominator = 2_usize.pow(flips as u32) as f64;
+        let denominator = 2_f64.powi(flips as i32);
         let mut branches: Vec<(f64, Mutation, Vec<CoinSeq>)> = vec![];
         for heads in 0..=flips {
             let probability = Self::binomial_coefficient(flips, heads) as f64 / denominator;
-            let sequences = generate_sequences_with_heads(flips, heads)
-                .into_iter()
-                .map(CoinSeq)
-                .collect::<Vec<_>>();
-            branches.push((probability, make_mutation(heads), sequences));
+            branches.push((
+                probability,
+                make_mutation(heads),
+                vec![CoinSeq(vec![])], // placeholder; replaced below with compact metadata
+            ));
         }
-        Self::from_coin_branches(branches)
-            .expect("binomial_by_heads should always create valid branches")
+        let built = branches
+            .into_iter()
+            .enumerate()
+            .map(|(heads, (probability, mutation, _))| OutcomeBranch {
+                probability,
+                mutation,
+                coin_paths: CoinPaths::BinomialByHeads { flips, heads },
+            })
+            .collect();
+        let outcomes = Self { branches: built };
+        outcomes
+            .validate()
+            .expect("binomial_by_heads should always create valid branches");
+        outcomes
     }
 
     pub fn geometric_until_tails(
@@ -206,6 +219,22 @@ impl Outcomes {
                         coin_paths: CoinPaths::Exact(kept),
                     });
                 }
+                CoinPaths::BinomialByHeads { flips, heads } => {
+                    saw_coin = true;
+                    if heads == 0 {
+                        continue;
+                    }
+
+                    let total = Self::binomial_coefficient(flips, heads) as f64;
+                    let kept = Self::binomial_coefficient(flips - 1, heads - 1) as f64;
+                    let scaled_probability = branch.probability * kept / total;
+
+                    branches.push(OutcomeBranch {
+                        probability: scaled_probability,
+                        mutation: branch.mutation,
+                        coin_paths: CoinPaths::BinomialByHeads { flips, heads },
+                    });
+                }
             }
         }
 
@@ -260,27 +289,9 @@ impl Outcomes {
     }
 }
 
-fn generate_sequences_with_heads(flips: usize, heads: usize) -> Vec<Vec<bool>> {
-    if flips == 0 {
-        return vec![vec![]];
-    }
-    let mut out = Vec::new();
-    let max_mask = 1_usize << flips;
-    for mask in 0..max_mask {
-        if mask.count_ones() as usize == heads {
-            let mut seq = Vec::with_capacity(flips);
-            for i in 0..flips {
-                seq.push(((mask >> i) & 1) == 1);
-            }
-            out.push(seq);
-        }
-    }
-    out
-}
-
 #[cfg(test)]
 mod tests {
-    use super::Outcomes;
+    use super::{CoinPaths, Outcomes};
 
     #[test]
     fn geometric_until_tails_max_heads_5_probabilities() {
@@ -305,5 +316,32 @@ mod tests {
             Outcomes::binomial_coefficient(5, 2),
             Outcomes::binomial_coefficient(5, 3)
         );
+    }
+
+    #[test]
+    fn binomial_by_heads_uses_compact_coin_paths() {
+        let outcomes = Outcomes::binomial_by_heads(30, |_| Box::new(|_, _, _| {}));
+
+        assert_eq!(outcomes.branches.len(), 31);
+        assert!(outcomes.branches.iter().all(|branch| matches!(
+            branch.coin_paths,
+            CoinPaths::BinomialByHeads { flips: 30, .. }
+        )));
+    }
+
+    #[test]
+    fn force_first_heads_on_binomial_outcomes_stays_valid() {
+        let outcomes = Outcomes::binomial_by_heads(10, |_| Box::new(|_, _, _| {}));
+        let forced = match outcomes.force_first_heads() {
+            Ok(forced) => forced,
+            Err(_) => panic!("forcing heads should succeed for binomial outcomes"),
+        };
+
+        assert_eq!(forced.branches.len(), 10);
+        assert!((forced.branches.iter().map(|b| b.probability).sum::<f64>() - 1.0).abs() < 1e-9);
+        assert!(forced.branches.iter().all(|branch| matches!(
+            branch.coin_paths,
+            CoinPaths::BinomialByHeads { flips: 10, heads } if heads > 0
+        )));
     }
 }
