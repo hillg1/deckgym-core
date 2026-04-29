@@ -145,12 +145,16 @@ pub static EFFECT_ABILITY_MECHANIC_MAP: LazyLock<HashMap<&'static str, AbilityMe
         );
         map.insert(
             "If you have Arceus or Arceus ex in play, this Pokémon has no Retreat Cost.",
-            AbilityMechanic::NoRetreatIfAnyPokemonInPlay { required_pokemon_names: vec!["Arceus".to_string(), "Arceus ex".to_string()] }
+            AbilityMechanic::NoRetreatIfAnyPokemonInPlay {
+                required_pokemon_names: vec!["Arceus".to_string(), "Arceus ex".to_string()],
+            },
         );
         // map.insert("If you have Arceus or Arceus ex in play, this Pokémon takes -30 damage from attacks.", todo_implementation);
         map.insert(
             "If you have Latias in play, this Pokémon has no Retreat Cost.",
-            AbilityMechanic::NoRetreatIfAnyPokemonInPlay { required_pokemon_names: vec!["Latias".to_string()] }
+            AbilityMechanic::NoRetreatIfAnyPokemonInPlay {
+                required_pokemon_names: vec!["Latias".to_string()],
+            },
         );
         // map.insert("If you have another Falinks in play, this Pokémon's attacks do +20 damage to your opponent's Active Pokémon, and this Pokémon takes -20 damage from attacks from your opponent's Pokémon.", todo_implementation);
         // map.insert("If your opponent's Pokémon is Knocked Out by damage from this Pokémon's attacks, during your opponent's next turn, prevent all damage from—and effects of—attacks done to this Pokémon.", todo_implementation);
@@ -415,7 +419,9 @@ pub static EFFECT_ABILITY_MECHANIC_MAP: LazyLock<HashMap<&'static str, AbilityMe
         // Latios (B2 217) — Fantastical Floating
         map.insert(
             "If you have Latias in play, this Pokémon has no Retreat Cost.",
-            AbilityMechanic::NoRetreatIfAnyPokemonInPlay { required_pokemon_names: vec!["Latias".to_string()] },
+            AbilityMechanic::NoRetreatIfAnyPokemonInPlay {
+                required_pokemon_names: vec!["Latias".to_string()],
+            },
         );
         // Unown (A4 085) — POWER
         map.insert(

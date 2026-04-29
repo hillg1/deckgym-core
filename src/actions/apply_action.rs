@@ -279,8 +279,7 @@ fn apply_attach_and_damage(
             continue;
         }
 
-        let attached =
-            state.attach_energy_from_zone(actor, *in_play_idx, *energy, *amount, false);
+        let attached = state.attach_energy_from_zone(actor, *in_play_idx, *energy, *amount, false);
         if attached {
             handle_damage(
                 state,
@@ -354,7 +353,14 @@ pub(crate) fn apply_place_card(
     state.in_play_pokemon[actor][index] = Some(played_card);
     state.refresh_starting_plains_bonus_for_idx(actor, index);
     // Soothing Wind / Flower Shield: cures status conditions for energy-bearing Pokémon when immunity grants enter play.
-    if has_ability_mechanic(card, &AbilityMechanic::SoothingWind) || has_ability_mechanic(card, &AbilityMechanic::ImmuneToStatusIfHasEnergyType { energy_type: EnergyType::Psychic }) {
+    if has_ability_mechanic(card, &AbilityMechanic::SoothingWind)
+        || has_ability_mechanic(
+            card,
+            &AbilityMechanic::ImmuneToStatusIfHasEnergyType {
+                energy_type: EnergyType::Psychic,
+            },
+        )
+    {
         debug!("Immunity ability entered play – curing status conditions for player {actor}");
         state.enforce_energy_status_immunities(actor);
     }

@@ -693,18 +693,27 @@ pub static EFFECT_MECHANIC_MAP: LazyLock<HashMap<&'static str, Mechanic>> = Lazy
     map.insert("If 1 of your Pokémon used Sweets Relay during your last turn, this attack does 20 more damage.", Mechanic::ExtraDamageIfUsedAttackLastTurn { attack_name: "Sweets Relay".to_string(), extra_damage: 20 });
     map.insert("If 1 of your Pokémon used Sweets Relay during your last turn, this attack does 30 more damage.", Mechanic::ExtraDamageIfUsedAttackLastTurn { attack_name: "Sweets Relay".to_string(), extra_damage: 30 });
     map.insert("If 1 of your Pokémon used Sweets Relay during your last turn, this attack does 60 more damage.", Mechanic::ExtraDamageIfUsedAttackLastTurn { attack_name: "Sweets Relay".to_string(), extra_damage: 60 });
-    map.insert("If Durant is on your Bench, this attack does 40 more damage.", Mechanic::ExtraDamageIfSpecificPokemonOnBench {
-        pokemon_names: vec!["Durant".to_string()],
-        extra_damage: 40,
-    });
-    map.insert("If Latios is on your Bench, this attack does 20 more damage.", Mechanic::ExtraDamageIfSpecificPokemonOnBench {
-        pokemon_names: vec!["Latios".to_string()],
-        extra_damage: 20,
-    });
-    map.insert("If Passimian is on your Bench, this attack does 40 more damage.", Mechanic::ExtraDamageIfSpecificPokemonOnBench {
-        pokemon_names: vec!["Passimian".to_string()],
-        extra_damage: 40,
-    });
+    map.insert(
+        "If Durant is on your Bench, this attack does 40 more damage.",
+        Mechanic::ExtraDamageIfSpecificPokemonOnBench {
+            pokemon_names: vec!["Durant".to_string()],
+            extra_damage: 40,
+        },
+    );
+    map.insert(
+        "If Latios is on your Bench, this attack does 20 more damage.",
+        Mechanic::ExtraDamageIfSpecificPokemonOnBench {
+            pokemon_names: vec!["Latios".to_string()],
+            extra_damage: 20,
+        },
+    );
+    map.insert(
+        "If Passimian is on your Bench, this attack does 40 more damage.",
+        Mechanic::ExtraDamageIfSpecificPokemonOnBench {
+            pokemon_names: vec!["Passimian".to_string()],
+            extra_damage: 40,
+        },
+    );
     // map.insert("If any of your Benched Pokémon have damage on them, this attack does 50 more damage.", todo_implementation);
     map.insert("If any of your Pokémon were Knocked Out by damage from an attack during your opponent's last turn, this attack does 60 more damage.", Mechanic::ExtraDamageIfKnockedOutLastTurn { extra_damage: 60 });
     map.insert("If any of your Pokémon were Knocked Out by damage from an attack during your opponent's last turn, this attack does 40 more damage.", Mechanic::ExtraDamageIfKnockedOutLastTurn { extra_damage: 40 });
@@ -1370,10 +1379,13 @@ pub static EFFECT_MECHANIC_MAP: LazyLock<HashMap<&'static str, Mechanic>> = Lazy
             bench_side: BenchSide::YourBench,
         },
     );
-    map.insert("This attack does 40 damage for each time your Pokémon used Sweets Relay during this game.", Mechanic::DamageMultiplierPerSpecificAttackUse {
-        attack_name: "Sweets Relay".to_string(),
-        damage_per_use: 40,
-    });
+    map.insert(
+        "This attack does 40 damage for each time your Pokémon used Sweets Relay during this game.",
+        Mechanic::DamageMultiplierPerSpecificAttackUse {
+            attack_name: "Sweets Relay".to_string(),
+            damage_per_use: 40,
+        },
+    );
     map.insert(
         "This attack does 40 damage to 1 of your opponent's Pokémon.",
         Mechanic::DirectDamage {
@@ -1817,15 +1829,24 @@ pub static EFFECT_MECHANIC_MAP: LazyLock<HashMap<&'static str, Mechanic>> = Lazy
     );
     map.insert(
         "Flip a coin. If tails, during your next turn, this Pokémon can't attack.",
-        Mechanic::CoinFlipCardEffectOnTails { effect: CardEffect::CannotAttack, duration: 1 },
+        Mechanic::CoinFlipCardEffectOnTails {
+            effect: CardEffect::CannotAttack,
+            duration: 1,
+        },
     );
     map.insert(
         "This attack does 70 damage to 1 of your opponent's Benched Pokémon.",
-        Mechanic::AlsoChoiceBenchDamage { opponent: true, damage: 70 },
+        Mechanic::AlsoChoiceBenchDamage {
+            opponent: true,
+            damage: 70,
+        },
     );
     map.insert(
         "This attack does 50 damage to 1 of your opponent's Benched Pokémon.",
-        Mechanic::AlsoChoiceBenchDamage { opponent: true, damage: 50 },
+        Mechanic::AlsoChoiceBenchDamage {
+            opponent: true,
+            damage: 50,
+        },
     );
     map.insert(
         "Heal 50 damage from 1 of your Benched Pokémon.",
@@ -1849,7 +1870,10 @@ pub static EFFECT_MECHANIC_MAP: LazyLock<HashMap<&'static str, Mechanic>> = Lazy
     );
     map.insert(
         "This attack does 20 damage for each Energy attached to your opponent's Active Pokémon.",
-        Mechanic::DamagePerEnergyAll { opponent: true, damage_per_energy: 20 },
+        Mechanic::DamagePerEnergyAll {
+            opponent: true,
+            damage_per_energy: 20,
+        },
     );
     // ── Missing attack effects found during benchmarks ──
     // Tornadus (P-B 030 / B2 138) — "If a Stadium is in play, this attack does 40 more damage."
@@ -1860,10 +1884,7 @@ pub static EFFECT_MECHANIC_MAP: LazyLock<HashMap<&'static str, Mechanic>> = Lazy
     );
     // Machop (B2 079) — "Discard a Stadium in play."
     // Since stadiums are not tracked, this is a no-op.
-    map.insert(
-        "Discard a Stadium in play.",
-        Mechanic::DiscardStadium,
-    );
+    map.insert("Discard a Stadium in play.", Mechanic::DiscardStadium);
     // Mesprit (A2 166) — "You can use this attack only if you have Uxie and Azelf on your Bench. Discard all Energy from this Pokémon."
     map.insert(
         "You can use this attack only if you have Uxie and Azelf on your Bench. Discard all Energy from this Pokémon.",
@@ -1900,7 +1921,10 @@ pub static EFFECT_MECHANIC_MAP: LazyLock<HashMap<&'static str, Mechanic>> = Lazy
     // Mimikyu (A3 083 / P-A 066) — "This attack also does 20 damage to 1 of your Pokémon."
     map.insert(
         "This attack also does 20 damage to 1 of your Pokémon.",
-        Mechanic::AlsoChoiceInPlayDamage { opponent: false, damage: 20 },
+        Mechanic::AlsoChoiceInPlayDamage {
+            opponent: false,
+            damage: 20,
+        },
     );
     // Smeargle (A4 148 / A4 184) — "Change the type of a random Energy attached to your opponent's Active Pokémon to 1 of the following at random: [G], [R], [W], [L], [P], [F], [D], or [M]."
     map.insert(
@@ -1926,7 +1950,10 @@ pub static EFFECT_MECHANIC_MAP: LazyLock<HashMap<&'static str, Mechanic>> = Lazy
     // Latias (P-A 101) — Crossing Flights
     map.insert(
         "If Latios is on your Bench, this attack does 20 more damage.",
-        Mechanic::ExtraDamageIfSpecificPokemonOnBench { pokemon_names: vec!["Latios".to_string()], extra_damage: 20 },
+        Mechanic::ExtraDamageIfSpecificPokemonOnBench {
+            pokemon_names: vec!["Latios".to_string()],
+            extra_damage: 20,
+        },
     );
     // Milcery (A4b 186) — Sweets Relay
     map.insert(
@@ -1936,12 +1963,17 @@ pub static EFFECT_MECHANIC_MAP: LazyLock<HashMap<&'static str, Mechanic>> = Lazy
     // Indeedee (B2 169) — Zen Shard
     map.insert(
         "This attack does 70 damage to 1 of your opponent's Benched Pokémon.",
-        Mechanic::AlsoChoiceBenchDamage { opponent: true, damage: 70 },
+        Mechanic::AlsoChoiceBenchDamage {
+            opponent: true,
+            damage: 70,
+        },
     );
     // Uxie (A2 075) — Mind Boost
     map.insert(
         "Take a [P] Energy from your Energy Zone and attach it to Mesprit or Azelf.",
-        Mechanic::ChargePsychicByName { names: vec!["Mesprit".to_string(), "Azelf".to_string()] },
+        Mechanic::ChargePsychicByName {
+            names: vec!["Mesprit".to_string(), "Azelf".to_string()],
+        },
     );
     // Azurill (A4a 077) — Squishy Healing
     map.insert(
@@ -1954,10 +1986,7 @@ pub static EFFECT_MECHANIC_MAP: LazyLock<HashMap<&'static str, Mechanic>> = Lazy
         Mechanic::ChoiceInPlayHeal { amount: 20 },
     );
     // Machop (B2 079) — Shatter
-    map.insert(
-        "Discard a Stadium in play.",
-        Mechanic::DiscardStadium,
-    );
+    map.insert("Discard a Stadium in play.", Mechanic::DiscardStadium);
     // Mew (B2b 086) — Miraculous Memory
     map.insert(
         "1 attack from among the Pokémon in your opponent's hand and deck is chosen at random, and you use the chosen attack as this attack.",
@@ -1971,7 +2000,9 @@ pub static EFFECT_MECHANIC_MAP: LazyLock<HashMap<&'static str, Mechanic>> = Lazy
     // Rayquaza (P-A 063) — Flip until tails
     map.insert(
         "Flip a coin until you get tails. This attack does 30 more damage for each heads.",
-        Mechanic::FlipUntilTailsDamage { damage_per_heads: 30 },
+        Mechanic::FlipUntilTailsDamage {
+            damage_per_heads: 30,
+        },
     );
     // Oricorio (B2 161) — Next turn damage boost
     map.insert(

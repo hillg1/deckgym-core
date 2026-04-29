@@ -662,7 +662,7 @@ fn discard_opponent_active_tools_and_self_discard(in_play_idx: usize) -> Outcome
             debug!("Dismantling Keys: Discarding opponent's active tool and discarding self");
             state.discard_tool(opponent, 0);
             state.discard_from_play(action.actor, in_play_idx);
-            
+
             // If the active was discarded (no, Klefki was on bench so active wasn't discarded, but check if we discarded Klefki from active spot anyway)
             // Wait, we enforce it's used from bench, so in_play_idx != 0.
         }
@@ -698,11 +698,17 @@ fn psychic_connect_outcome() -> Outcomes {
                 from_in_play_idx: in_play_idx,
                 to_in_play_idx: 0,
                 energy_type: EnergyType::Psychic,
-                amount: pokemon.attached_energy.iter().filter(|&&e| e == EnergyType::Psychic).count() as u32,
+                amount: pokemon
+                    .attached_energy
+                    .iter()
+                    .filter(|&&e| e == EnergyType::Psychic)
+                    .count() as u32,
             })
             .collect::<Vec<_>>();
         if !possible_moves.is_empty() {
-            state.move_generation_stack.push((acting_player, possible_moves));
+            state
+                .move_generation_stack
+                .push((acting_player, possible_moves));
         }
     })
 }

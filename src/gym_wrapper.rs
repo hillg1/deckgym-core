@@ -10,19 +10,19 @@
 //
 // All fields verified against: state.rs, played_card.rs, card.rs
 
+use numpy::PyArray1; // FIX 3: removed IntoPyArray (unused, API changed)
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use numpy::PyArray1;  // FIX 3: removed IntoPyArray (unused, API changed)
-use rand::{rngs::StdRng, SeedableRng, RngCore};
+use rand::{rngs::StdRng, RngCore, SeedableRng};
 use std::collections::HashSet;
 
 use crate::{
-    Deck, State,
     actions::{Action, SimpleAction},
     generate_possible_actions,
-    state::GameOutcome,
     hooks::energy_missing,
     models::{Card, EnergyType, PlayedCard, TrainerType},
+    state::GameOutcome,
+    Deck, State,
 };
 
 #[pyfunction]
@@ -35,22 +35,22 @@ pub fn test_gym_module() -> String {
 // Keep in sync with deck_builder.py after maturin develop.
 // =============================================================================
 
-const N_ENERGY_TYPES:     usize = 10;
+const N_ENERGY_TYPES: usize = 10;
 
-const STATE_SCALARS:      usize = 26;
-const ENERGY_ZONE_FEAT:   usize = 42;   // (10+10+1) * 2
-const POKEMON_SLOTS:      usize = 8;
-const POKEMON_FEAT:       usize = 64;
-const HAND_SLOTS:         usize = 10;
-const HAND_FEAT:          usize = 20;
-const ACTION_SLOTS:       usize = 25;
-const ACTION_FEAT:        usize = 16;
+const STATE_SCALARS: usize = 26;
+const ENERGY_ZONE_FEAT: usize = 42; // (10+10+1) * 2
+const POKEMON_SLOTS: usize = 8;
+const POKEMON_FEAT: usize = 64;
+const HAND_SLOTS: usize = 10;
+const HAND_FEAT: usize = 20;
+const ACTION_SLOTS: usize = 25;
+const ACTION_FEAT: usize = 16;
 
-const ENERGY_ZONE_OFFSET: usize = STATE_SCALARS;                                    // 26
-const POKEMON_OFFSET:     usize = ENERGY_ZONE_OFFSET + ENERGY_ZONE_FEAT;            // 68
-const HAND_OFFSET:        usize = POKEMON_OFFSET + POKEMON_SLOTS * POKEMON_FEAT;    // 580
-const ACTION_OFFSET:      usize = HAND_OFFSET + HAND_SLOTS * HAND_FEAT;             // 780
-pub const OBS_SIZE:       usize = 1200;
+const ENERGY_ZONE_OFFSET: usize = STATE_SCALARS; // 26
+const POKEMON_OFFSET: usize = ENERGY_ZONE_OFFSET + ENERGY_ZONE_FEAT; // 68
+const HAND_OFFSET: usize = POKEMON_OFFSET + POKEMON_SLOTS * POKEMON_FEAT; // 580
+const ACTION_OFFSET: usize = HAND_OFFSET + HAND_SLOTS * HAND_FEAT; // 780
+pub const OBS_SIZE: usize = 1200;
 
 // =============================================================================
 // Energy helpers
@@ -62,15 +62,15 @@ pub const OBS_SIZE:       usize = 1200;
 #[inline]
 fn energy_type_to_idx(e: EnergyType) -> usize {
     match e {
-        EnergyType::Grass     => 0,
-        EnergyType::Fire      => 1,
-        EnergyType::Water     => 2,
+        EnergyType::Grass => 0,
+        EnergyType::Fire => 1,
+        EnergyType::Water => 2,
         EnergyType::Lightning => 3,
-        EnergyType::Psychic   => 4,
-        EnergyType::Fighting  => 5,
-        EnergyType::Darkness  => 6,
-        EnergyType::Metal     => 7,
-        EnergyType::Dragon    => 8,
+        EnergyType::Psychic => 4,
+        EnergyType::Fighting => 5,
+        EnergyType::Darkness => 6,
+        EnergyType::Metal => 7,
+        EnergyType::Dragon => 8,
         EnergyType::Colorless => 9,
     }
 }
@@ -84,10 +84,16 @@ fn primary_energy_idx(energy_required: &[EnergyType]) -> usize {
             counts[energy_type_to_idx(*e)] += 1;
         }
     }
-    let (best_idx, best_count) = counts.iter().enumerate()
+    let (best_idx, best_count) = counts
+        .iter()
+        .enumerate()
         .max_by_key(|(_, &c)| c)
         .unwrap_or((9, &0));
-    if *best_count == 0 { 9 } else { best_idx }
+    if *best_count == 0 {
+        9
+    } else {
+        best_idx
+    }
 }
 
 // =============================================================================
@@ -123,33 +129,32 @@ fn primary_energy_idx(energy_required: &[EnergyType]) -> usize {
 // [63]     reserved = 0
 // =============================================================================
 
-fn encode_pokemon_slot(
-    played: Option<&PlayedCard>,
-    state:  &State,
-    player: usize,
-    out:    &mut [f32],
-) {
-    for x in out.iter_mut() { *x = 0.0; }
-    let Some(pc) = played else { return; };
+fn encode_pokemon_slot(played: Option<&PlayedCard>, state: &State, player: usize, out: &mut [f32]) {
+    for x in out.iter_mut() {
+        *x = 0.0;
+    }
+    let Some(pc) = played else {
+        return;
+    };
 
     // FIX 1: total_hp is a field on PokemonCard, not PlayedCard
     let total_hp = match &pc.card {
         Card::Pokemon(pcard) => pcard.hp.max(1) as f32,
         _ => 60.0f32,
     };
-    let ko_pts   = pc.card.get_knockout_points() as f32;
+    let ko_pts = pc.card.get_knockout_points() as f32;
 
     out[0] = 1.0;
-    out[1] = pc.get_remaining_hp() as f32 / total_hp;  // FIX 1: method call
+    out[1] = pc.get_remaining_hp() as f32 / total_hp; // FIX 1: method call
     out[2] = (total_hp / 300.0).min(1.0);
     out[3] = ko_pts / 3.0;
 
     if let Card::Pokemon(pcard) = &pc.card {
         out[4] = (pcard.stage as f32 / 2.0).min(1.0);
-        out[5] = if pc.card.is_ex()            { 1.0 } else { 0.0 };
-        out[6] = if pcard.ability.is_some()    { 1.0 } else { 0.0 };
-        out[7] = if pc.ability_used            { 1.0 } else { 0.0 };
-        out[8] = if pc.played_this_turn        { 1.0 } else { 0.0 };
+        out[5] = if pc.card.is_ex() { 1.0 } else { 0.0 };
+        out[6] = if pcard.ability.is_some() { 1.0 } else { 0.0 };
+        out[7] = if pc.ability_used { 1.0 } else { 0.0 };
+        out[8] = if pc.played_this_turn { 1.0 } else { 0.0 };
         out[9] = if pc.attached_tool.is_some() { 1.0 } else { 0.0 };
         if let Some(weakness) = pcard.weakness {
             out[10 + energy_type_to_idx(weakness)] = 1.0;
@@ -188,11 +193,11 @@ fn encode_pokemon_slot(
     }
 
     // FIX 2: status fields are private, use methods
-    out[58] = if pc.is_poisoned()  { 1.0 } else { 0.0 };
-    out[59] = if pc.is_burned()    { 1.0 } else { 0.0 };
+    out[58] = if pc.is_poisoned() { 1.0 } else { 0.0 };
+    out[59] = if pc.is_burned() { 1.0 } else { 0.0 };
     out[60] = if pc.is_paralyzed() { 1.0 } else { 0.0 };
-    out[61] = if pc.is_asleep()    { 1.0 } else { 0.0 };
-    out[62] = if pc.is_confused()  { 1.0 } else { 0.0 };
+    out[61] = if pc.is_asleep() { 1.0 } else { 0.0 };
+    out[62] = if pc.is_confused() { 1.0 } else { 0.0 };
     // out[63] reserved = 0
 }
 
@@ -213,8 +218,12 @@ fn encode_pokemon_slot(
 // =============================================================================
 
 fn encode_hand_slot(card: Option<&Card>, is_playable: bool, out: &mut [f32]) {
-    for x in out.iter_mut() { *x = 0.0; }
-    let Some(card) = card else { return; };
+    for x in out.iter_mut() {
+        *x = 0.0;
+    }
+    let Some(card) = card else {
+        return;
+    };
 
     out[0] = 1.0;
     out[6] = if is_playable { 1.0 } else { 0.0 };
@@ -227,14 +236,12 @@ fn encode_hand_slot(card: Option<&Card>, is_playable: bool, out: &mut [f32]) {
             out[9] = (pcard.stage as f32 / 2.0).min(1.0);
             out[10 + energy_type_to_idx(pcard.energy_type)] = 1.0;
         }
-        Card::Trainer(tcard) => {
-            match tcard.trainer_card_type {
-                TrainerType::Supporter                  => out[3] = 1.0,
-                TrainerType::Tool                       => out[4] = 1.0,
-                TrainerType::Stadium                    => out[5] = 1.0,
-                TrainerType::Item | TrainerType::Fossil => out[2] = 1.0,
-            }
-        }
+        Card::Trainer(tcard) => match tcard.trainer_card_type {
+            TrainerType::Supporter => out[3] = 1.0,
+            TrainerType::Tool => out[4] = 1.0,
+            TrainerType::Stadium => out[5] = 1.0,
+            TrainerType::Item | TrainerType::Fossil => out[2] = 1.0,
+        },
     }
 }
 
@@ -243,11 +250,21 @@ fn playable_hand_card_ids(possible_actions: &[Action]) -> HashSet<String> {
     let mut ids = HashSet::new();
     for action in possible_actions {
         match &action.action {
-            SimpleAction::Place(card, _) => { ids.insert(card.get_id()); }
-            SimpleAction::Evolve { evolution, from_deck, .. } => {
-                if !from_deck { ids.insert(evolution.get_id()); }
+            SimpleAction::Place(card, _) => {
+                ids.insert(card.get_id());
             }
-            SimpleAction::Play { trainer_card, .. } => { ids.insert(Card::Trainer(trainer_card.clone()).get_id()); }
+            SimpleAction::Evolve {
+                evolution,
+                from_deck,
+                ..
+            } => {
+                if !from_deck {
+                    ids.insert(evolution.get_id());
+                }
+            }
+            SimpleAction::Play { trainer_card, .. } => {
+                ids.insert(Card::Trainer(trainer_card.clone()).get_id());
+            }
             _ => {}
         }
     }
@@ -261,10 +278,10 @@ fn hand_sort_key(card: &Card, is_playable: bool) -> (u8, u8, String) {
         Card::Pokemon(_) => 0u8,
         Card::Trainer(tc) => match tc.trainer_card_type {
             TrainerType::Supporter => 1,
-            TrainerType::Item      => 2,
-            TrainerType::Tool      => 3,
-            TrainerType::Stadium   => 4,
-            TrainerType::Fossil    => 5,
+            TrainerType::Item => 2,
+            TrainerType::Tool => 3,
+            TrainerType::Stadium => 4,
+            TrainerType::Fossil => 5,
         },
     };
     (p, t, card.get_id())
@@ -291,26 +308,26 @@ fn hand_sort_key(card: &Card, is_playable: bool) -> (u8, u8, String) {
 // [15] placed_card_is_ex
 // =============================================================================
 
-fn encode_action_slot(
-    action:       &SimpleAction,
-    state:        &State,
-    agent_player: usize,
-    out:          &mut [f32],
-) {
-    for x in out.iter_mut() { *x = 0.0; }
+fn encode_action_slot(action: &SimpleAction, state: &State, agent_player: usize, out: &mut [f32]) {
+    for x in out.iter_mut() {
+        *x = 0.0;
+    }
     let opp = 1 - agent_player;
 
     match action {
-        SimpleAction::EndTurn => { out[0] = 1.0; }
+        SimpleAction::EndTurn => {
+            out[0] = 1.0;
+        }
 
         SimpleAction::Attack(atk_idx) => {
             out[1] = 1.0;
             if let Some(active) = state.maybe_get_active(agent_player) {
                 if let Some(atk) = active.get_attacks().get(*atk_idx) {
-                    let dmg  = atk.fixed_damage as f32;
-                    let miss = energy_missing(active, &atk.energy_required, state, agent_player).len();
-                    out[8]  = (dmg / 300.0).min(1.0);
-                    out[9]  = (atk.energy_required.len() as f32 / 4.0).min(1.0);
+                    let dmg = atk.fixed_damage as f32;
+                    let miss =
+                        energy_missing(active, &atk.energy_required, state, agent_player).len();
+                    out[8] = (dmg / 300.0).min(1.0);
+                    out[9] = (atk.energy_required.len() as f32 / 4.0).min(1.0);
                     out[10] = if miss == 0 { 1.0 } else { 0.0 };
                     if let Some(opp_active) = state.maybe_get_active(opp) {
                         // FIX 1: use pcard.hp and get_remaining_hp()
@@ -327,7 +344,9 @@ fn encode_action_slot(
             }
         }
 
-        SimpleAction::Attach { .. } => { out[2] = 1.0; }
+        SimpleAction::Attach { .. } => {
+            out[2] = 1.0;
+        }
 
         SimpleAction::Place(card, _) => {
             out[3] = 1.0;
@@ -345,10 +364,16 @@ fn encode_action_slot(
             }
         }
 
-        SimpleAction::Retreat(_) => { out[5] = 1.0; }
+        SimpleAction::Retreat(_) => {
+            out[5] = 1.0;
+        }
 
         SimpleAction::Play { trainer_card, .. } => {
-            if trainer_card.trainer_card_type == TrainerType::Supporter { out[7] = 1.0; } else { out[6] = 1.0; }
+            if trainer_card.trainer_card_type == TrainerType::Supporter {
+                out[7] = 1.0;
+            } else {
+                out[6] = 1.0;
+            }
         }
 
         // DrawCard, UseAbility, MoveEnergy, Activate, etc.: all bits 0.
@@ -361,30 +386,36 @@ fn encode_action_slot(
 // Full observation builder
 // =============================================================================
 
-fn build_obs_for_player(
-    state:            &State,
-    viewer:           usize,
-    possible_actions: &[Action],
-) -> Vec<f32> {
+fn build_obs_for_player(state: &State, viewer: usize, possible_actions: &[Action]) -> Vec<f32> {
     let opp = 1 - viewer;
     let mut obs = vec![0.0f32; OBS_SIZE];
 
     // ── Section 1: State scalars [0..26] ─────────────────────────────────
     let turn = state.turn_count as f32;
-    obs[0]  = state.points[viewer] as f32 / 3.0;
-    obs[1]  = state.points[opp] as f32 / 3.0;
-    obs[2]  = (state.decks[viewer].cards.len() as f32 / 20.0).min(1.0);
-    obs[3]  = (state.decks[opp].cards.len() as f32 / 20.0).min(1.0);
-    obs[4]  = (turn / 100.0).min(1.0);
-    obs[5]  = ((turn - 90.0).max(0.0) / 10.0).min(1.0);
-    obs[6]  = (state.hands[viewer].len() as f32 / 10.0).min(1.0);
-    obs[7]  = (state.hands[opp].len() as f32 / 10.0).min(1.0);
-    obs[8]  = if state.has_played_support { 1.0 } else { 0.0 };
-    obs[9]  = if state.current_energy.is_none() { 1.0 } else { 0.0 };
+    obs[0] = state.points[viewer] as f32 / 3.0;
+    obs[1] = state.points[opp] as f32 / 3.0;
+    obs[2] = (state.decks[viewer].cards.len() as f32 / 20.0).min(1.0);
+    obs[3] = (state.decks[opp].cards.len() as f32 / 20.0).min(1.0);
+    obs[4] = (turn / 100.0).min(1.0);
+    obs[5] = ((turn - 90.0).max(0.0) / 10.0).min(1.0);
+    obs[6] = (state.hands[viewer].len() as f32 / 10.0).min(1.0);
+    obs[7] = (state.hands[opp].len() as f32 / 10.0).min(1.0);
+    obs[8] = if state.has_played_support { 1.0 } else { 0.0 };
+    obs[9] = if state.current_energy.is_none() {
+        1.0
+    } else {
+        0.0
+    };
     obs[10] = if state.has_retreated { 1.0 } else { 0.0 };
 
-    let own_nrg: usize = state.enumerate_in_play_pokemon(viewer).map(|(_, pc)| pc.attached_energy.len()).sum();
-    let opp_nrg: usize = state.enumerate_in_play_pokemon(opp).map(|(_, pc)| pc.attached_energy.len()).sum();
+    let own_nrg: usize = state
+        .enumerate_in_play_pokemon(viewer)
+        .map(|(_, pc)| pc.attached_energy.len())
+        .sum();
+    let opp_nrg: usize = state
+        .enumerate_in_play_pokemon(opp)
+        .map(|(_, pc)| pc.attached_energy.len())
+        .sum();
     obs[11] = (own_nrg as f32 / 10.0).min(1.0);
     obs[12] = (opp_nrg as f32 / 10.0).min(1.0);
     obs[13] = state.enumerate_bench_pokemon(viewer).count() as f32 / 3.0;
@@ -395,14 +426,32 @@ fn build_obs_for_player(
     let opp_disc = &state.discard_piles[opp];
     obs[16] = (own_disc.len() as f32 / 40.0).min(1.0);
     obs[17] = (opp_disc.len() as f32 / 40.0).min(1.0);
-    obs[18] = (own_disc.iter().filter(|c| matches!(c, Card::Pokemon(_))).count() as f32 / 10.0).min(1.0);
-    obs[19] = (opp_disc.iter().filter(|c| matches!(c, Card::Pokemon(_))).count() as f32 / 10.0).min(1.0);
+    obs[18] = (own_disc
+        .iter()
+        .filter(|c| matches!(c, Card::Pokemon(_)))
+        .count() as f32
+        / 10.0)
+        .min(1.0);
+    obs[19] = (opp_disc
+        .iter()
+        .filter(|c| matches!(c, Card::Pokemon(_)))
+        .count() as f32
+        / 10.0)
+        .min(1.0);
     obs[20] = (own_disc.iter().filter(|c| c.is_support()).count() as f32 / 10.0).min(1.0);
     obs[21] = (opp_disc.iter().filter(|c| c.is_support()).count() as f32 / 10.0).min(1.0);
     obs[22] = (state.discard_energies[viewer].len() as f32 / 10.0).min(1.0);
     obs[23] = (state.discard_energies[opp].len() as f32 / 10.0).min(1.0);
-    obs[24] = if state.knocked_out_by_opponent_attack_this_turn { 1.0 } else { 0.0 };
-    obs[25] = if state.knocked_out_by_opponent_attack_last_turn { 1.0 } else { 0.0 };
+    obs[24] = if state.knocked_out_by_opponent_attack_this_turn {
+        1.0
+    } else {
+        0.0
+    };
+    obs[25] = if state.knocked_out_by_opponent_attack_last_turn {
+        1.0
+    } else {
+        0.0
+    };
 
     // ── Section 2: Energy zone [26..68] ──────────────────────────────────
     // Sub-layout:
@@ -418,18 +467,31 @@ fn build_obs_for_player(
     for e in &state.decks[viewer].energy_types {
         obs[36 + energy_type_to_idx(*e)] = 1.0;
     }
-    obs[46] = if state.decks[viewer].energy_types.len() == 1 { 1.0 } else { 0.0 };
+    obs[46] = if state.decks[viewer].energy_types.len() == 1 {
+        1.0
+    } else {
+        0.0
+    };
     // [47–56] opp current = 0
     for e in &state.decks[opp].energy_types {
         obs[57 + energy_type_to_idx(*e)] = 1.0;
     }
-    obs[67] = if state.decks[opp].energy_types.len() == 1 { 1.0 } else { 0.0 };
+    obs[67] = if state.decks[opp].energy_types.len() == 1 {
+        1.0
+    } else {
+        0.0
+    };
 
     // ── Section 3: Pokemon slots [68..580] ───────────────────────────────
     // Slot 0: my active
     {
         let s = POKEMON_OFFSET;
-        encode_pokemon_slot(state.maybe_get_active(viewer), state, viewer, &mut obs[s..s + POKEMON_FEAT]);
+        encode_pokemon_slot(
+            state.maybe_get_active(viewer),
+            state,
+            viewer,
+            &mut obs[s..s + POKEMON_FEAT],
+        );
     }
     // Slots 1–3: my bench
     for (i, (_, pc)) in state.enumerate_bench_pokemon(viewer).take(3).enumerate() {
@@ -439,7 +501,12 @@ fn build_obs_for_player(
     // Slot 4: opp active
     {
         let s = POKEMON_OFFSET + 4 * POKEMON_FEAT;
-        encode_pokemon_slot(state.maybe_get_active(opp), state, opp, &mut obs[s..s + POKEMON_FEAT]);
+        encode_pokemon_slot(
+            state.maybe_get_active(opp),
+            state,
+            opp,
+            &mut obs[s..s + POKEMON_FEAT],
+        );
     }
     // Slots 5–7: opp bench
     for (i, (_, pc)) in state.enumerate_bench_pokemon(opp).take(3).enumerate() {
@@ -471,15 +538,42 @@ fn build_obs_for_player(
 
 fn build_mask(possible_actions: &[Action], max_actions: usize) -> Vec<i8> {
     let mut mask = vec![0i8; max_actions];
-    for i in 0..possible_actions.len().min(max_actions) { mask[i] = 1; }
+    for i in 0..possible_actions.len().min(max_actions) {
+        mask[i] = 1;
+    }
     mask
+}
+
+fn should_yield_to_agent(
+    state: &State,
+    actor: usize,
+    actions: &[Action],
+    agent_player: usize,
+) -> bool {
+    if actor != agent_player {
+        return false;
+    }
+
+    // Auto-play the full setup phase so reset() starts on the agent's first real turn
+    // rather than on opening placement decisions.
+    if state.turn_count == 0 {
+        return false;
+    }
+
+    // Single stack actions like the opening DrawCard are forced bookkeeping, not
+    // meaningful RL choices. Auto-resolve them before handing control back.
+    if actions.len() == 1 && actions[0].is_stack {
+        return false;
+    }
+
+    true
 }
 
 fn calculate_reward(winner: Option<GameOutcome>, agent_player: usize) -> f32 {
     match winner {
-        Some(GameOutcome::Win(p)) if p == agent_player =>  1.0,
-        Some(GameOutcome::Win(_))                      => -1.0,
-        _                                              => -0.3,
+        Some(GameOutcome::Win(p)) if p == agent_player => 1.0,
+        Some(GameOutcome::Win(_)) => -1.0,
+        _ => -0.3,
     }
 }
 
@@ -489,15 +583,15 @@ fn calculate_reward(winner: Option<GameOutcome>, agent_player: usize) -> f32 {
 
 #[pyclass(unsendable)]
 pub struct PocketGym {
-    agent_deck:      Deck,
-    opponent_deck:   Deck,
-    max_actions:     usize,
+    agent_deck: Deck,
+    opponent_deck: Deck,
+    max_actions: usize,
     opponent_policy: Option<PyObject>,
-    current_state:   Option<State>,
-    rng:             StdRng,
+    current_state: Option<State>,
+    rng: StdRng,
     possible_actions: Vec<Action>,
-    game_over:       bool,
-    agent_player:    usize,
+    game_over: bool,
+    agent_player: usize,
 }
 
 impl Drop for PocketGym {
@@ -518,10 +612,10 @@ impl PocketGym {
     #[new]
     #[pyo3(signature = (agent_deck_path, opponent_deck_path=None, max_actions=25, opponent_policy=None))]
     fn new(
-        agent_deck_path:    String,
+        agent_deck_path: String,
         opponent_deck_path: Option<String>,
-        max_actions:        usize,
-        opponent_policy:    Option<PyObject>,
+        max_actions: usize,
+        opponent_policy: Option<PyObject>,
     ) -> PyResult<Self> {
         let agent_deck = Deck::from_file(&agent_deck_path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e))?;
@@ -531,7 +625,10 @@ impl PocketGym {
             None => agent_deck.clone(),
         };
         Ok(PocketGym {
-            agent_deck, opponent_deck, max_actions, opponent_policy,
+            agent_deck,
+            opponent_deck,
+            max_actions,
+            opponent_policy,
             current_state: None,
             rng: StdRng::from_entropy(),
             possible_actions: Vec::new(),
@@ -541,59 +638,100 @@ impl PocketGym {
     }
 
     #[pyo3(signature = (policy=None))]
-    fn set_opponent_policy(&mut self, policy: Option<PyObject>) { self.opponent_policy = policy; }
+    fn set_opponent_policy(&mut self, policy: Option<PyObject>) {
+        self.opponent_policy = policy;
+    }
 
-    fn is_selfplay_mode(&self) -> bool { self.opponent_policy.is_some() }
+    fn is_selfplay_mode(&self) -> bool {
+        self.opponent_policy.is_some()
+    }
 
     #[getter]
-    fn observation_size(&self) -> usize { OBS_SIZE }
+    fn observation_size(&self) -> usize {
+        OBS_SIZE
+    }
 
     #[pyo3(signature = (seed=None))]
-    fn reset<'py>(&mut self, py: Python<'py>, seed: Option<u64>)
-        -> PyResult<(Py<PyArray1<f32>>, Py<PyDict>)>
-    {
-        use crate::{Game, players::{Player, WeightedRandomPlayer}};
-        if let Some(s) = seed { self.rng = StdRng::seed_from_u64(s); }
+    fn reset<'py>(
+        &mut self,
+        py: Python<'py>,
+        seed: Option<u64>,
+    ) -> PyResult<(Py<PyArray1<f32>>, Py<PyDict>)> {
+        use crate::{
+            players::{Player, WeightedRandomPlayer},
+            Game,
+        };
+        if let Some(s) = seed {
+            self.rng = StdRng::seed_from_u64(s);
+        }
         let players: Vec<Box<dyn Player>> = vec![
-            Box::new(WeightedRandomPlayer { deck: self.agent_deck.clone() }),
-            Box::new(WeightedRandomPlayer { deck: self.opponent_deck.clone() }),
+            Box::new(WeightedRandomPlayer {
+                deck: self.agent_deck.clone(),
+            }),
+            Box::new(WeightedRandomPlayer {
+                deck: self.opponent_deck.clone(),
+            }),
         ];
         let mut game = Game::new(players, self.rng.next_u64());
         self.agent_player = 0;
         loop {
             let state = game.get_state_clone();
-            if state.is_game_over() { break; }
-            let (actor, _) = generate_possible_actions(&state);
-            if actor == self.agent_player { break; }
+            if state.is_game_over() {
+                break;
+            }
+            let (actor, actions) = generate_possible_actions(&state);
+            if should_yield_to_agent(&state, actor, &actions, self.agent_player) {
+                break;
+            }
             game.play_tick();
         }
         let state = game.get_state_clone();
         let (actor, actions) = generate_possible_actions(&state);
-        self.possible_actions = if actor == self.agent_player { actions } else { vec![] };
+        self.possible_actions = if should_yield_to_agent(&state, actor, &actions, self.agent_player)
+        {
+            actions
+        } else {
+            vec![]
+        };
         self.game_over = state.is_game_over();
         self.current_state = Some(state);
         Ok((self.build_observation(py)?, self.build_info(py)?))
     }
 
-    fn step<'py>(&mut self, py: Python<'py>, action_idx: usize)
-        -> PyResult<(Py<PyArray1<f32>>, f32, bool, bool, Py<PyDict>)>
-    {
-        use crate::{Game, players::{Player, WeightedRandomPlayer}, actions::apply_action};
-        let state = self.current_state.as_mut()
-            .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>("Call reset() first"))?;
+    fn step<'py>(
+        &mut self,
+        py: Python<'py>,
+        action_idx: usize,
+    ) -> PyResult<(Py<PyArray1<f32>>, f32, bool, bool, Py<PyDict>)> {
+        use crate::{
+            actions::apply_action,
+            players::{Player, WeightedRandomPlayer},
+            Game,
+        };
+        let state = self.current_state.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>("Call reset() first")
+        })?;
         if self.game_over {
-            return Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>("Game over; call reset()"));
+            return Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
+                "Game over; call reset()",
+            ));
         }
         if self.possible_actions.is_empty() {
-            return Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>("No valid actions"));
+            return Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
+                "No valid actions",
+            ));
         }
         let action_idx = action_idx.min(self.possible_actions.len() - 1);
         let action = self.possible_actions[action_idx].clone();
         apply_action(&mut StdRng::from_entropy(), state, &action);
 
         let players: Vec<Box<dyn Player>> = vec![
-            Box::new(WeightedRandomPlayer { deck: self.agent_deck.clone() }),
-            Box::new(WeightedRandomPlayer { deck: self.opponent_deck.clone() }),
+            Box::new(WeightedRandomPlayer {
+                deck: self.agent_deck.clone(),
+            }),
+            Box::new(WeightedRandomPlayer {
+                deck: self.opponent_deck.clone(),
+            }),
         ];
         let mut game = Game::from_state(state.clone(), players, self.rng.next_u64());
 
@@ -604,33 +742,59 @@ impl PocketGym {
                 self.game_over = true;
                 self.possible_actions = vec![];
                 self.current_state = Some(cur);
-                return Ok((self.build_observation(py)?, reward, true, false, self.build_info(py)?));
+                return Ok((
+                    self.build_observation(py)?,
+                    reward,
+                    true,
+                    false,
+                    self.build_info(py)?,
+                ));
             }
             let (actor, actions) = generate_possible_actions(&cur);
-            if actor == self.agent_player {
+            if should_yield_to_agent(&cur, actor, &actions, self.agent_player) {
                 self.possible_actions = actions;
                 self.current_state = Some(cur);
-                return Ok((self.build_observation(py)?, 0.0, false, false, self.build_info(py)?));
+                return Ok((
+                    self.build_observation(py)?,
+                    0.0,
+                    false,
+                    false,
+                    self.build_info(py)?,
+                ));
             }
-            if actions.is_empty() { game.play_tick(); continue; }
+            if actions.is_empty() {
+                game.play_tick();
+                continue;
+            }
 
             if let Some(ref policy) = self.opponent_policy {
                 let opp = 1 - self.agent_player;
-                let opp_obs  = build_obs_for_player(&cur, opp, &actions);
+                let opp_obs = build_obs_for_player(&cur, opp, &actions);
                 let opp_mask = build_mask(&actions, self.max_actions);
                 let chosen: usize = {
-                    let obs_py  = PyArray1::from_slice_bound(py, &opp_obs);
+                    let obs_py = PyArray1::from_slice_bound(py, &opp_obs);
                     let mask_py = PyArray1::from_slice_bound(py, &opp_mask);
-                    policy.call1(py, (obs_py, mask_py))
-                        .ok().and_then(|r| r.extract::<usize>(py).ok()).unwrap_or(0)
+                    policy
+                        .call1(py, (obs_py, mask_py))
+                        .ok()
+                        .and_then(|r| r.extract::<usize>(py).ok())
+                        .unwrap_or(0)
                 };
                 let safe = chosen.min(actions.len() - 1);
                 let mut next = cur.clone();
                 apply_action(&mut StdRng::from_entropy(), &mut next, &actions[safe]);
-                game = Game::from_state(next, vec![
-                    Box::new(WeightedRandomPlayer { deck: self.agent_deck.clone() }),
-                    Box::new(WeightedRandomPlayer { deck: self.opponent_deck.clone() }),
-                ], self.rng.next_u64());
+                game = Game::from_state(
+                    next,
+                    vec![
+                        Box::new(WeightedRandomPlayer {
+                            deck: self.agent_deck.clone(),
+                        }),
+                        Box::new(WeightedRandomPlayer {
+                            deck: self.opponent_deck.clone(),
+                        }),
+                    ],
+                    self.rng.next_u64(),
+                );
             } else {
                 game.play_tick();
             }
@@ -638,26 +802,35 @@ impl PocketGym {
     }
 
     fn action_masks<'py>(&self, py: Python<'py>) -> Py<PyArray1<i8>> {
-        PyArray1::from_slice_bound(py, &build_mask(&self.possible_actions, self.max_actions)).unbind()
+        PyArray1::from_slice_bound(py, &build_mask(&self.possible_actions, self.max_actions))
+            .unbind()
     }
 
     fn build_observation<'py>(&self, py: Python<'py>) -> PyResult<Py<PyArray1<f32>>> {
-        let state = self.current_state.as_ref()
+        let state = self
+            .current_state
+            .as_ref()
             .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>("No state"))?;
         // FIX 3: use PyArray1::from_slice_bound
-        Ok(PyArray1::from_slice_bound(py, &build_obs_for_player(state, self.agent_player, &self.possible_actions)).unbind())
+        Ok(PyArray1::from_slice_bound(
+            py,
+            &build_obs_for_player(state, self.agent_player, &self.possible_actions),
+        )
+        .unbind())
     }
 
     fn build_info<'py>(&self, py: Python<'py>) -> PyResult<Py<PyDict>> {
-        let state = self.current_state.as_ref()
+        let state = self
+            .current_state
+            .as_ref()
             .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>("No state"))?;
         let d = PyDict::new_bound(py);
-        d.set_item("turn_count",        state.turn_count)?;
+        d.set_item("turn_count", state.turn_count)?;
         d.set_item("num_valid_actions", self.possible_actions.len())?;
-        d.set_item("game_over",         state.is_game_over())?;
-        d.set_item("agent_player",      self.agent_player)?;
-        d.set_item("selfplay_mode",     self.opponent_policy.is_some())?;
-        d.set_item("obs_size",          OBS_SIZE)?;
+        d.set_item("game_over", state.is_game_over())?;
+        d.set_item("agent_player", self.agent_player)?;
+        d.set_item("selfplay_mode", self.opponent_policy.is_some())?;
+        d.set_item("obs_size", OBS_SIZE)?;
         Ok(d.unbind())
     }
 }
@@ -665,22 +838,29 @@ impl PocketGym {
 #[pyfunction]
 #[pyo3(signature = (agent_deck_path, opponent_deck_path=None, max_actions=25, opponent_policy=None))]
 pub fn create_gym(
-    agent_deck_path:    String,
+    agent_deck_path: String,
     opponent_deck_path: Option<String>,
-    max_actions:        usize,
-    opponent_policy:    Option<PyObject>,
+    max_actions: usize,
+    opponent_policy: Option<PyObject>,
 ) -> PyResult<PocketGym> {
-    PocketGym::new(agent_deck_path, opponent_deck_path, max_actions, opponent_policy)
+    PocketGym::new(
+        agent_deck_path,
+        opponent_deck_path,
+        max_actions,
+        opponent_policy,
+    )
 }
 
 // =============================================================================
 // EMM agent — unchanged
 // =============================================================================
 
-use crate::players::{ExpectiMiniMaxPlayer, ValueFunction, value_functions};
+use crate::players::{value_functions, ExpectiMiniMaxPlayer, ValueFunction};
 
 #[pyclass(unsendable)]
-pub struct EmmAgent { player: ExpectiMiniMaxPlayer }
+pub struct EmmAgent {
+    player: ExpectiMiniMaxPlayer,
+}
 
 #[pymethods]
 impl EmmAgent {
@@ -690,21 +870,33 @@ impl EmmAgent {
         let deck = Deck::from_file(&deck_path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e))?;
         let vf: ValueFunction = Box::new(value_functions::baseline_value_function);
-        Ok(EmmAgent { player: ExpectiMiniMaxPlayer {
-            deck, max_depth, write_debug_trees: false, value_function: vf,
-        }})
+        Ok(EmmAgent {
+            player: ExpectiMiniMaxPlayer {
+                deck,
+                max_depth,
+                write_debug_trees: false,
+                value_function: vf,
+            },
+        })
     }
 
     fn get_action(&mut self, gym: &PocketGym) -> PyResult<usize> {
         use crate::players::Player;
-        let state = gym.current_state.as_ref()
+        let state = gym
+            .current_state
+            .as_ref()
             .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>("No state"))?;
         let (_, actions) = generate_possible_actions(state);
-        if actions.is_empty() { return Ok(0); }
-        let chosen = self.player.decision_fn(&mut StdRng::from_entropy(), state, &actions);
-        Ok(actions.iter().position(|a|
-            format!("{:?}", a.action) == format!("{:?}", chosen.action)
-        ).unwrap_or(0))
+        if actions.is_empty() {
+            return Ok(0);
+        }
+        let chosen = self
+            .player
+            .decision_fn(&mut StdRng::from_entropy(), state, &actions);
+        Ok(actions
+            .iter()
+            .position(|a| format!("{:?}", a.action) == format!("{:?}", chosen.action))
+            .unwrap_or(0))
     }
 }
 
@@ -712,4 +904,51 @@ impl EmmAgent {
 #[pyo3(signature = (deck_path, max_depth=2))]
 pub fn create_emm_agent(deck_path: String, max_depth: usize) -> PyResult<EmmAgent> {
     EmmAgent::new(deck_path, max_depth)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_yield_to_agent;
+    use crate::{
+        actions::{Action, SimpleAction},
+        card_ids::CardId,
+        database::get_card_by_enum,
+        State,
+    };
+
+    fn action(actor: usize, action: SimpleAction, is_stack: bool) -> Action {
+        Action {
+            actor,
+            action,
+            is_stack,
+        }
+    }
+
+    #[test]
+    fn does_not_yield_to_agent_during_setup_phase() {
+        let mut state = State::default();
+        state.turn_count = 0;
+        let basic = get_card_by_enum(CardId::A1001Bulbasaur);
+        let actions = vec![action(0, SimpleAction::Place(basic, 0), false)];
+
+        assert!(!should_yield_to_agent(&state, 0, &actions, 0));
+    }
+
+    #[test]
+    fn does_not_yield_to_agent_for_forced_stack_action() {
+        let mut state = State::default();
+        state.turn_count = 1;
+        let actions = vec![action(0, SimpleAction::DrawCard { amount: 1 }, true)];
+
+        assert!(!should_yield_to_agent(&state, 0, &actions, 0));
+    }
+
+    #[test]
+    fn yields_to_agent_for_real_turn_choice() {
+        let mut state = State::default();
+        state.turn_count = 1;
+        let actions = vec![action(0, SimpleAction::EndTurn, false)];
+
+        assert!(should_yield_to_agent(&state, 0, &actions, 0));
+    }
 }

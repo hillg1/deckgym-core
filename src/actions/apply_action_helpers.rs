@@ -554,7 +554,9 @@ pub(crate) fn handle_knockouts(
         if is_from_active_attack {
             let ko_initiator_of_this_damage = attacking_ref.0;
             if ko_receiver != ko_initiator_of_this_damage {
-                let ko_pokemon = state.in_play_pokemon[ko_receiver][ko_pokemon_idx].as_ref().unwrap();
+                let ko_pokemon = state.in_play_pokemon[ko_receiver][ko_pokemon_idx]
+                    .as_ref()
+                    .unwrap();
                 if crate::tools::has_tool(ko_pokemon, crate::card_ids::CardId::A4155RescueScarf) {
                     rescued = true;
                 }

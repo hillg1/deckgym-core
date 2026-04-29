@@ -44,7 +44,7 @@ fn main() {
     for (name, id) in &missing_attacks {
         println!("- {name} ({id:?})");
     }
-    
+
     println!("\n--- Missing Abilities ({}) ---", missing_abilities.len());
     for (name, id) in &missing_abilities {
         println!("- {name} ({id:?})");
@@ -54,7 +54,7 @@ fn main() {
     for (name, id) in &missing_trainers {
         println!("- {name} ({id:?})");
     }
-    
+
     println!("\n--- Missing Tools ({}) ---", missing_tools.len());
     for (name, id) in &missing_tools {
         println!("- {name} ({id:?})");

@@ -1287,11 +1287,20 @@ fn team_rocket_grunt_outcomes() -> Outcomes {
 }
 
 fn blue_effect(_rng: &mut StdRng, state: &mut State, action: &Action) {
-    state.add_turn_effect(TurnEffect::ReducedDamageGlobal { amount: 10, receiving_player: action.actor }, 2);
+    state.add_turn_effect(
+        TurnEffect::ReducedDamageGlobal {
+            amount: 10,
+            receiving_player: action.actor,
+        },
+        2,
+    );
 }
 
 fn lt_surge_effect(_rng: &mut StdRng, state: &mut State, action: &Action) {
-    let active_name = state.in_play_pokemon[action.actor][0].as_ref().map(|p| p.get_name()).unwrap_or("".to_string());
+    let active_name = state.in_play_pokemon[action.actor][0]
+        .as_ref()
+        .map(|p| p.get_name())
+        .unwrap_or("".to_string());
     if active_name == "Raichu" || active_name == "Electrode" || active_name == "Electabuzz" {
         let mut lightning_energies = Vec::new();
         for slot in state.in_play_pokemon[action.actor].iter_mut().skip(1) {
@@ -1322,11 +1331,16 @@ fn pokemon_flute_effect(rng: &mut StdRng, state: &mut State, action: &Action) {
             }
         }
     }
-    
-    if !basic_indices.is_empty() && state.in_play_pokemon[opponent].iter().skip(1).any(|slot| slot.is_none()) {
+
+    if !basic_indices.is_empty()
+        && state.in_play_pokemon[opponent]
+            .iter()
+            .skip(1)
+            .any(|slot| slot.is_none())
+    {
         let chosen_idx = basic_indices[rng.gen_range(0..basic_indices.len())];
         let card = state.discard_piles[opponent].remove(chosen_idx);
-        
+
         for slot in state.in_play_pokemon[opponent].iter_mut().skip(1) {
             if slot.is_none() {
                 *slot = Some(crate::hooks::to_playable_card(&card, true));
@@ -1520,7 +1534,9 @@ mod tests {
         let active = to_playable_card(&get_card_by_enum(CardId::A1001Bulbasaur), false);
         let bench = to_playable_card(&get_card_by_enum(CardId::A1033Charmander), false);
         let mut active = active;
-        active.cards_behind.push(get_card_by_enum(CardId::A1002Ivysaur));
+        active
+            .cards_behind
+            .push(get_card_by_enum(CardId::A1002Ivysaur));
         state.in_play_pokemon[0][0] = Some(active);
         state.in_play_pokemon[0][1] = Some(bench);
 
