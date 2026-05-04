@@ -5,6 +5,7 @@ use std::fmt::Write;
 use std::vec;
 
 use crate::actions::{forecast_action, Action};
+use crate::state::GameOutcome;
 use crate::{Deck, State};
 
 use super::Player;
@@ -13,6 +14,8 @@ use super::Player;
 // Takes a state and player index, returns a score
 // Using Box<dyn Fn> to allow closures with captured variables
 pub type ValueFunction = Box<dyn Fn(&State, usize) -> f64>;
+
+const TERMINAL_PLY_BONUS: f64 = 1_000.0;
 
 struct DebugStateNode {
     acting_player: usize,
@@ -54,13 +57,15 @@ impl Player for ExpectiMiniMaxPlayer {
         // Get value for each possible action
         let original_level = log::max_level();
         log::set_max_level(LevelFilter::Info); // Temporarily silence debug and trace logs
+        let mut search_rng = rng.clone();
+        let search_depth = self.max_depth.saturating_sub(1);
         let mut scores: Vec<f64> = Vec::with_capacity(possible_actions.len());
         for action in possible_actions.iter() {
             let (score, action_node) = expected_value_function(
-                rng,
+                &mut search_rng,
                 state,
                 action,
-                self.max_depth - 1,
+                search_depth,
                 myself,
                 &self.value_function,
             );
@@ -120,11 +125,12 @@ fn expected_value_function(
     trace!("{indent}E({myself}) depth left: {depth} action: {action:?}");
 
     let (probabilities, mutations) = forecast_action(state, action).into_branches();
-    let mut outcomes: Vec<State> = vec![];
+    let mut outcomes: Vec<(State, StdRng)> = vec![];
     for mutation in mutations {
         let mut state_copy = state.clone();
-        mutation(rng, &mut state_copy, action);
-        outcomes.push(state_copy);
+        let mut branch_rng = rng.clone();
+        mutation(&mut branch_rng, &mut state_copy, action);
+        outcomes.push((state_copy, branch_rng));
     }
 
     // Mantain node
@@ -134,8 +140,9 @@ fn expected_value_function(
         children: vec![],
         value: 0.0,
     };
-    for (prob, outcome) in probabilities.iter().zip(outcomes.iter()) {
-        let (score, mut state_node) = expectiminimax(rng, outcome, depth, myself, value_function);
+    for (prob, (outcome, branch_rng)) in probabilities.iter().zip(outcomes.iter_mut()) {
+        let (score, mut state_node) =
+            expectiminimax(branch_rng, outcome, depth, myself, value_function);
         scores.push(score);
         state_node.proba = *prob;
         action_node.children.push(state_node);
@@ -159,8 +166,8 @@ fn expectiminimax(
     myself: usize,
     value_function: &ValueFunction,
 ) -> (f64, DebugStateNode) {
-    if state.is_game_over() || depth == 0 || state.current_player != myself {
-        let score = value_function(state, myself);
+    if state.is_game_over() || depth == 0 {
+        let score = evaluate_leaf_state(state, depth, myself, value_function);
         let state_node = DebugStateNode {
             acting_player: state.current_player,
             children: vec![],
@@ -190,9 +197,9 @@ fn expectiminimax(
         };
         (best_score, state_node)
     } else {
-        // TODO: If minimizing, we can't just generate_possible_actions since
-        //  not everything is public information. So we would have to have
-        //  our own version of it that only returns the actions that are
+        // This searches the full engine state, including the opponent turn.
+        // If we later want a partially observable version, this branch should
+        // become an information-set search rather than truncating outright.
         let mut scores: Vec<f64> = Vec::with_capacity(actions.len());
         let mut children: Vec<DebugActionNode> = Vec::new();
         for action in actions.iter() {
@@ -210,6 +217,21 @@ fn expectiminimax(
         };
         (best_score, state_node)
     }
+}
+
+fn evaluate_leaf_state(
+    state: &State,
+    depth: usize,
+    myself: usize,
+    value_function: &ValueFunction,
+) -> f64 {
+    let base_score = value_function(state, myself);
+    let terminal_bias = match state.winner {
+        Some(GameOutcome::Win(winner)) if winner == myself => TERMINAL_PLY_BONUS * depth as f64,
+        Some(GameOutcome::Win(_)) => -TERMINAL_PLY_BONUS * depth as f64,
+        _ => 0.0,
+    };
+    base_score + terminal_bias
 }
 
 impl Debug for ExpectiMiniMaxPlayer {
@@ -323,5 +345,66 @@ fn generate_dot_recursive(
                 myself,
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rand::SeedableRng;
+
+    use super::{evaluate_leaf_state, expectiminimax, ValueFunction};
+    use crate::card_ids::CardId;
+    use crate::database::get_card_by_enum;
+    use crate::hooks::to_playable_card;
+    use crate::state::GameOutcome;
+    use crate::State;
+
+    #[test]
+    fn searches_opponent_branches_instead_of_truncating() {
+        let mut state = State::default();
+        state.turn_count = 1;
+        state.current_player = 1;
+        state.in_play_pokemon[0][0] = Some(to_playable_card(
+            &get_card_by_enum(CardId::A1001Bulbasaur),
+            false,
+        ));
+        state.in_play_pokemon[1][0] = Some(to_playable_card(
+            &get_card_by_enum(CardId::A1033Charmander),
+            false,
+        ));
+        state.move_generation_stack.push((
+            1,
+            vec![crate::actions::SimpleAction::ApplyDamage {
+                attacking_ref: (1, 0),
+                targets: vec![(10, 0, 0)],
+                is_from_active_attack: false,
+            }],
+        ));
+
+        let value_function: ValueFunction =
+            Box::new(|state, _| state.get_remaining_hp(0, 0) as f64);
+        let mut rng = rand::rngs::StdRng::seed_from_u64(7);
+
+        let (score, _) = expectiminimax(&mut rng, &state, 1, 0, &value_function);
+        assert_eq!(score, 60.0);
+    }
+
+    #[test]
+    fn prefers_faster_wins_and_slower_losses() {
+        let mut winning_state = State::default();
+        winning_state.winner = Some(GameOutcome::Win(0));
+
+        let mut losing_state = State::default();
+        losing_state.winner = Some(GameOutcome::Win(1));
+
+        let value_function: ValueFunction = Box::new(|_, _| 0.0);
+
+        let fast_win = evaluate_leaf_state(&winning_state, 3, 0, &value_function);
+        let slow_win = evaluate_leaf_state(&winning_state, 1, 0, &value_function);
+        let fast_loss = evaluate_leaf_state(&losing_state, 3, 0, &value_function);
+        let slow_loss = evaluate_leaf_state(&losing_state, 1, 0, &value_function);
+
+        assert!(fast_win > slow_win);
+        assert!(fast_loss < slow_loss);
     }
 }
