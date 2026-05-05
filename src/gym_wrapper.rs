@@ -768,6 +768,9 @@ impl PocketGym {
             }
 
             if let Some(ref policy) = self.opponent_policy {
+                // Update current_state before calling opponent policy so
+                // Python-side agents (e.g. EMM) can read the live game state.
+                self.current_state = Some(cur.clone());
                 let opp = 1 - self.agent_player;
                 let opp_obs = build_obs_for_player(&cur, opp, &actions);
                 let opp_mask = build_mask(&actions, self.max_actions);
