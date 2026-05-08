@@ -678,6 +678,32 @@ fn forecast_effect_attack_by_mechanic(
         Mechanic::CoinFlipNoEffectOrStatus { condition } => {
             coinflip_no_effect_or_status(attack.fixed_damage, *condition)
         }
+        Mechanic::SwitchSelfWithBenchType { energy_type } => {
+            switch_self_with_bench_type(state, attack.fixed_damage, *energy_type)
+        }
+        Mechanic::ExtraDamagePerSpecificPokemonOnBench {
+            pokemon_names,
+            damage_per_pokemon,
+        } => extra_damage_per_specific_pokemon_on_bench_attack(
+            state,
+            attack.fixed_damage,
+            pokemon_names,
+            *damage_per_pokemon,
+        ),
+        Mechanic::AlsoBenchDamageIfSpecificPokemonOnBench {
+            pokemon_names,
+            opponent,
+            damage,
+        } => also_bench_damage_if_specific_pokemon_on_bench(
+            state,
+            attack.fixed_damage,
+            pokemon_names,
+            *opponent,
+            *damage,
+        ),
+        Mechanic::CoinFlipSwitchOpponentActive => {
+            coin_flip_switch_opponent_active(attack.fixed_damage)
+        }
     }
 }
 
@@ -3674,4 +3700,114 @@ fn choice_in_play_heal(state: &State, amount: u32) -> Outcomes {
             .move_generation_stack
             .push((action.actor, choices.clone()));
     }))
+}
+
+fn switch_self_with_bench_type(state: &State, fixed_damage: u32, energy_type: EnergyType) -> Outcomes {
+    // If there are no bench pokemon of the correct type, this attack will just do damage.
+    // We can pre-check this to return a simpler outcome if possible.
+    let has_valid_bench = state
+        .enumerate_bench_pokemon(state.current_player)
+        .any(|(_, p)| p.card.get_type() == Some(energy_type));
+
+    if !has_valid_bench {
+        return active_damage_doutcome(fixed_damage);
+    }
+    
+    Outcomes::single_fn(move |_, state, action| {
+        let attacking_ref = (action.actor, 0);
+        crate::actions::apply_action_helpers::handle_damage_only(
+            state,
+            attacking_ref,
+            &[(fixed_damage, (action.actor + 1) % 2, 0)],
+            true,
+            None,
+        );
+        
+        // Only trigger switch if attacker survived
+        if let Some(active) = state.in_play_pokemon[action.actor][0].as_ref() {
+            if !active.is_knocked_out() {
+                let choices: Vec<SimpleAction> = state
+                    .enumerate_bench_pokemon(action.actor)
+                    .filter(|(_, p)| p.card.get_type() == Some(energy_type))
+                    .map(|(idx, _)| SimpleAction::Activate { player: action.actor, in_play_idx: idx })
+                    .collect();
+                if !choices.is_empty() {
+                    state.move_generation_stack.push((action.actor, choices));
+                }
+            }
+        }
+        crate::actions::apply_action_helpers::handle_knockouts(state, attacking_ref, true);
+    })
+}
+
+fn extra_damage_per_specific_pokemon_on_bench_attack(
+    state: &State,
+    fixed_damage: u32,
+    pokemon_names: &[String],
+    damage_per_pokemon: u32,
+) -> Outcomes {
+    let count = state
+        .enumerate_bench_pokemon(state.current_player)
+        .filter(|(_, p)| pokemon_names.contains(&p.card.get_name()))
+        .count() as u32;
+    active_damage_doutcome(fixed_damage + count * damage_per_pokemon)
+}
+
+fn also_bench_damage_if_specific_pokemon_on_bench(
+    state: &State,
+    fixed_damage: u32,
+    pokemon_names: &[String],
+    opponent: bool,
+    damage: u32,
+) -> Outcomes {
+    let has_specific_pokemon = state
+        .enumerate_bench_pokemon(state.current_player)
+        .any(|(_, p)| pokemon_names.contains(&p.card.get_name()));
+
+    if !has_specific_pokemon {
+        return active_damage_doutcome(fixed_damage);
+    }
+
+    Outcomes::single_fn(move |_, state, action| {
+        let opponent_player = (action.actor + 1) % 2;
+        let target_player = if opponent { opponent_player } else { action.actor };
+        
+        let mut damages = vec![(fixed_damage, opponent_player, 0)];
+        for (idx, _) in state.enumerate_bench_pokemon(target_player) {
+            damages.push((damage, target_player, idx));
+        }
+        
+        crate::actions::apply_action_helpers::handle_damage(
+            state,
+            (action.actor, 0),
+            &damages,
+            true,
+            None,
+        );
+    })
+}
+
+fn coin_flip_switch_opponent_active(fixed_damage: u32) -> Outcomes {
+    Outcomes::binary_coin(
+        Box::new(move |_, state, action| {
+            let opponent = (action.actor + 1) % 2;
+            let attacking_ref = (action.actor, 0);
+            crate::actions::apply_action_helpers::handle_damage_only(state, attacking_ref, &[(fixed_damage, opponent, 0)], true, None);
+            
+            // Only trigger switch if opponent active survived
+            if let Some(active) = state.in_play_pokemon[opponent][0].as_ref() {
+                if !active.is_knocked_out() {
+                    let choices: Vec<SimpleAction> = state
+                        .enumerate_bench_pokemon(opponent)
+                        .map(|(idx, _)| SimpleAction::Activate { player: opponent, in_play_idx: idx })
+                        .collect();
+                    if !choices.is_empty() {
+                        state.move_generation_stack.push((opponent, choices));
+                    }
+                }
+            }
+            crate::actions::apply_action_helpers::handle_knockouts(state, attacking_ref, true);
+        }),
+        active_damage_mutation(fixed_damage)
+    )
 }

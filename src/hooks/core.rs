@@ -1022,6 +1022,19 @@ pub(crate) fn get_attack_cost(
         }
     }
 
+    // Check for ReduceAttackCostIfToolAttached ability
+    if let Some(active) = &state.in_play_pokemon[attacking_player][0] {
+        if active.has_tool_attached() {
+            if let Some(AbilityMechanic::ReduceAttackCostIfToolAttached { energy_type, amount }) = get_ability_mechanic(&active.card) {
+                for _ in 0..*amount {
+                    if let Some(pos) = modified_cost.iter().position(|e| *e == *energy_type) {
+                        modified_cost.remove(pos);
+                    }
+                }
+            }
+        }
+    }
+
     modified_cost
 }
 

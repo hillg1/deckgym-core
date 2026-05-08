@@ -36,3 +36,15 @@ mod sunflora_quick_grow_beam_test;
 mod vulpix_tail_whip_test;
 #[path = "pokemon/xerneas_geoburst_test.rs"]
 mod xerneas_geoburst_test;
+#[path = "pokemon/wishiwashi_ex_test.rs"]
+mod wishiwashi_ex_test;
+#[path = "pokemon/chinchou_test.rs"]
+mod chinchou_test;
+#[path = "pokemon/turtonator_test.rs"]
+mod turtonator_test;
+#[path = "pokemon/minun_test.rs"]
+mod minun_test;
+#[path = "pokemon/tapu_koko_test.rs"]
+mod tapu_koko_test;
+#[path = "pokemon/cherubi_test.rs"]
+mod cherubi_test;

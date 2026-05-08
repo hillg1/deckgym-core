@@ -391,4 +391,17 @@ pub enum Mechanic {
     CoinFlipNoEffectOrStatus {
         condition: StatusCondition,
     },
+    SwitchSelfWithBenchType {
+        energy_type: EnergyType,
+    },
+    ExtraDamagePerSpecificPokemonOnBench {
+        pokemon_names: Vec<String>,
+        damage_per_pokemon: u32,
+    },
+    AlsoBenchDamageIfSpecificPokemonOnBench {
+        pokemon_names: Vec<String>,
+        opponent: bool,
+        damage: u32,
+    },
+    CoinFlipSwitchOpponentActive,
 }

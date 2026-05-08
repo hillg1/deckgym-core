@@ -182,4 +182,8 @@ pub enum AbilityMechanic {
     /// If you do, put 2 damage counters on that Pokémon.
     PsyShadow,
     PsychicConnect,
+    ReduceAttackCostIfToolAttached {
+        energy_type: EnergyType,
+        amount: usize,
+    },
 }

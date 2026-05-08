@@ -1,10 +1,17 @@
-use crate::{card_ids::CardId, models::PlayedCard, tools::has_tool};
+use crate::{card_ids::CardId, effects::CardEffect, models::PlayedCard, tools::has_tool};
 
 /// Some cards counterattack either because of RockyHelmet or because of their own ability.
 pub(crate) fn get_counterattack_damage(card: &PlayedCard) -> u32 {
     let mut total_damage = 0;
     if has_tool(card, CardId::A2148RockyHelmet) {
         total_damage += 20;
+    }
+
+    // Check for CardEffect::RevengeDamage
+    for effect in card.get_active_effects() {
+        if let CardEffect::RevengeDamage { amount } = effect {
+            total_damage += amount;
+        }
     }
 
     // Some cards have it as an ability

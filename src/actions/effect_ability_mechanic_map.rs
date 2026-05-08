@@ -434,6 +434,10 @@ pub static EFFECT_ABILITY_MECHANIC_MAP: LazyLock<HashMap<&'static str, AbilityMe
             AbilityMechanic::DiscardOpponentActiveToolsAndSelfDiscard,
         );
         map.insert("Once during your turn, you may move all [P] Energy from 1 of your Benched [P] Pokémon to your Active Pokémon.", AbilityMechanic::PsychicConnect);
+        map.insert(
+            "If this Pokémon has a Pokémon Tool attached, attacks used by this Pokémon cost 1 less [G] Energy.",
+            AbilityMechanic::ReduceAttackCostIfToolAttached { energy_type: EnergyType::Grass, amount: 1 },
+        );
         map
     });
 

@@ -2010,5 +2010,38 @@ pub static EFFECT_MECHANIC_MAP: LazyLock<HashMap<&'static str, Mechanic>> = Lazy
         Mechanic::DamageAndNextTurnEffect { effect: TurnEffect::IncreasedDamage { amount: 20 } },
     );
 
+    map.insert(
+        "Switch this Pokémon with 1 of your Benched [L] Pokémon.",
+        Mechanic::SwitchSelfWithBenchType { energy_type: EnergyType::Lightning },
+    );
+    map.insert(
+        "This attack does 40 more damage for each of your Benched Wishiwashi and Wishiwashi ex.",
+        Mechanic::ExtraDamagePerSpecificPokemonOnBench {
+            pokemon_names: vec!["Wishiwashi".to_string(), "Wishiwashi ex".to_string()],
+            damage_per_pokemon: 40,
+        },
+    );
+    map.insert(
+        "If Plusle is on your Bench, this attack also does 10 damage to each of your opponent's Benched Pokémon.",
+        Mechanic::AlsoBenchDamageIfSpecificPokemonOnBench {
+            pokemon_names: vec!["Plusle".to_string()],
+            opponent: true,
+            damage: 10,
+        },
+    );
+    map.insert(
+        "During your opponent's next turn, if this Pokémon is damaged by an attack, do 20 damage to the Attacking Pokémon.",
+        Mechanic::DamageAndCardEffect {
+            opponent: false,
+            effect: CardEffect::RevengeDamage { amount: 20 },
+            duration: 1,
+            coin_flip: false,
+        },
+    );
+    map.insert(
+        "Flip a coin. If heads, switch in 1 of your opponent's Benched Pokémon to the Active Spot.",
+        Mechanic::CoinFlipSwitchOpponentActive,
+    );
+
     map
 });

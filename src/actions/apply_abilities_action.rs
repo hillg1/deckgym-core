@@ -258,6 +258,9 @@ fn forecast_ability_by_mechanic(
         AbilityMechanic::KOCounterattackDamage { .. } => {
             panic!("KOCounterattackDamage is a passive ability")
         }
+        AbilityMechanic::ReduceAttackCostIfToolAttached { .. } => {
+            panic!("ReduceAttackCostIfToolAttached is a passive ability")
+        }
     }
 }
 

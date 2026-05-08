@@ -164,6 +164,7 @@ fn can_use_ability_by_mechanic(
             }
         }
         AbilityMechanic::KOCounterattackDamage { .. } => false, // Passive ability
+        AbilityMechanic::ReduceAttackCostIfToolAttached { .. } => false, // Passive ability
         AbilityMechanic::PsyShadow => {
             !card.ability_used
                 && state.can_attach_energy_from_zone(0)
